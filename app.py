@@ -149,13 +149,13 @@ if uploaded_file:
 
         # Adicionar linhas verticais entre os meses
         num_meses = len(meses_unicos)
-        for i in range(1, num_meses):
-            fig5.add_vline(
-                x=i - 0.5,  # Posição entre as barras
-                line_width=1,
-                line_dash="dash",
-                line_color="gray"
-            )
+        for posicao in range(len(meses_unicos)-1):
+        fig5.add_vline(
+            x=posicao + 0.5,
+            line_width=1,
+            line_dash="dash",
+            line_color="gray"
+    )
 
         fig5.update_traces(
             textposition='inside',
