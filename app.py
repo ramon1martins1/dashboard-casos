@@ -15,7 +15,7 @@ if uploaded_file:
     df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')  # Para ordenação
     df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
     df["Ano"] = df["Abertura"].dt.year
-    df["Responsavel_Primeiro_Nome"] = df["Responsável"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+    #df["Responsavel_Primeiro_Nome"] = df["Responsável"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
         
     # Pré-processamento para o Top 10 Contas
     df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
