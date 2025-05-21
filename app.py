@@ -134,8 +134,8 @@ if uploaded_file:
         casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável", "Primeiro_Nome"]).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
-        # Converter para lista explícita
-        meses_display_list = list(meses_display_ordenados)
+        # Criar lista ordenada de meses únicos
+        meses_unicos = casos_resp["AnoMes_Display"].unique().tolist()
 
         fig5 = px.bar(
             casos_resp, 
@@ -147,22 +147,37 @@ if uploaded_file:
             barmode='group'
         )
 
-        # Adicionar linhas verticais para separar meses (usando a lista agora)
-        for i, mes in enumerate(meses_display_list[1:]):
+        # Adicionar linhas verticais entre os meses
+        num_meses = len(meses_unicos)
+        for i in range(1, num_meses):
             fig5.add_vline(
-                x=i + 0.5,  # Posição relativa baseada no índice
-                line_width=1, 
-                line_dash="dash", 
+                x=i - 0.5,  # Posição entre as barras
+                line_width=1,
+                line_dash="dash",
                 line_color="gray"
             )
-            
-        fig5.update_traces(textposition='inside', textangle=0)
+
+        fig5.update_traces(
+            textposition='inside',
+            textangle=0,
+            insidetextanchor='middle'
+        )
+
         fig5.update_xaxes(
-            type='category', 
-            categoryorder='array', 
-            categoryarray=meses_display_list,
+            type='category',
+            categoryorder='array',
+            categoryarray=meses_unicos,
             title_text="Mês/Ano"
         )
+
+        fig5.update_layout(
+            xaxis=dict(
+                tickmode='array',
+                tickvals=list(range(num_meses)),
+                ticktext=meses_unicos
+            )
+        )
+
         st.plotly_chart(fig5, use_container_width=True)
 
         st.success("✅ Dashboard carregado com sucesso!")
