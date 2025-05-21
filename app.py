@@ -15,6 +15,8 @@ if uploaded_file:
     df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')  # Para ordenação
     df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
     df["Ano"] = df["Abertura"].dt.year
+    df["Responsavel_Primeiro_Nome"] = df["Responsável"].apply(lambda x: x.split()[0] if pd.notnull(x) else x)
+
     
     # Pré-processamento para o Top 10 Contas
     df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
@@ -126,26 +128,29 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
+        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras e primeiro nome
         st.subheader("5️⃣ Casos por Responsável (Mensal)")
-        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
+
+        casos_resp = df_filtrado.groupby(
+            ["AnoMes", "AnoMes_Display", "Responsável", "Responsavel_Primeiro_Nome"]
+        ).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
         fig5 = px.bar(
             casos_resp, 
             x="AnoMes_Display", 
             y="Total", 
-            color="Responsável", 
-            text="Total", 
+            color="Responsavel_Primeiro_Nome",  # Cor com base no primeiro nome
+            text="Responsavel_Primeiro_Nome",   # Mostra o primeiro nome como texto
             title="Casos por Responsável",
-            barmode='group'  # Barras lado a lado
+            barmode='group'
         )
         fig5.update_traces(textposition='outside')
         fig5.update_xaxes(
             type='category', 
             categoryorder='array', 
             categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Adicionado título do eixo X
+            title_text="Mês/Ano"
         )
         st.plotly_chart(fig5, use_container_width=True)
 
