@@ -13,14 +13,11 @@ if uploaded_file:
 
     # Colunas auxiliares
     df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')  # Para ordenação
-    df["AnoMes_Display"] = df["Abertura"].dt.strftime('%m/%Y')  # Alterado para Mês/Ano
+    df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
     df["Ano"] = df["Abertura"].dt.year
     
-    # Extrair primeiro nome do responsável
-    df["Primeiro_Nome"] = df["Responsável"].str.split().str[0]
-    
     # Pré-processamento para o Top 10 Contas
-    df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x
+    df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
 
     # Filtros
     anos = sorted(df["Ano"].dropna().astype(int).unique())
@@ -64,8 +61,7 @@ if uploaded_file:
         fig1.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Alterado para Mês/Ano
+            categoryarray=meses_display_ordenados
         )
         st.plotly_chart(fig1, use_container_width=True)
 
@@ -87,12 +83,11 @@ if uploaded_file:
         fig2.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Alterado para Mês/Ano
+            categoryarray=meses_display_ordenados
         )
         st.plotly_chart(fig2, use_container_width=True)
 
-        ## 3️⃣ Reaberturas por Mês - Barras
+        ## 3️⃣ Reaberturas por Mês - Agora com barras
         st.subheader("3️⃣ Reaberturas por Mês")
         reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
         reaberturas = reaberturas.sort_values("AnoMes")
@@ -108,8 +103,7 @@ if uploaded_file:
         fig3.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Alterado para Mês/Ano
+            categoryarray=meses_display_ordenados
         )
         st.plotly_chart(fig3, use_container_width=True)
 
@@ -129,9 +123,9 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Barras com primeiro nome
+        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
         st.subheader("5️⃣ Casos por Responsável (Mensal)")
-        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável", "Primeiro_Nome"]).size().reset_index(name="Total")
+        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
         fig5 = px.bar(
@@ -139,26 +133,15 @@ if uploaded_file:
             x="AnoMes_Display", 
             y="Total", 
             color="Responsável", 
-            text="Primeiro_Nome",  # Mostra primeiro nome na base da barra
+            text="Total", 
             title="Casos por Responsável",
-            barmode='group'
+            barmode='group'  # Barras lado a lado
         )
-        
-        # Adicionar linhas verticais para separar meses
-        for mes in meses_display_ordenados[1:]:
-            fig5.add_vline(
-                x=meses_display_ordenados.index(mes)-0.5, 
-                line_width=1, 
-                line_dash="dash", 
-                line_color="gray"
-            )
-            
-        fig5.update_traces(textposition='inside', textangle=0)
+        fig5.update_traces(textposition='outside')
         fig5.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Alterado para Mês/Ano
+            categoryarray=meses_display_ordenados
         )
         st.plotly_chart(fig5, use_container_width=True)
 
