@@ -61,13 +61,12 @@ if uploaded_file:
         fig1.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            ttitle_text="Mês/Ano"
+            categoryarray=meses_display_ordenados
         )
         st.plotly_chart(fig1, use_container_width=True)
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
-        st.subheader("2️⃣ Casos por origem (Mensal)")
+        st.subheader("2️⃣ Casos por Origem (Mensal)")
         casos_origem = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Origem"]).size().reset_index(name="Total")
         casos_origem = casos_origem.sort_values("AnoMes")
 
@@ -89,7 +88,7 @@ if uploaded_file:
         st.plotly_chart(fig2, use_container_width=True)
 
         ## 3️⃣ Reaberturas por Mês - Agora com barras
-        st.subheader("3️⃣ Reaberturas por mês")
+        st.subheader("3️⃣ Reaberturas por Mês")
         reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
         reaberturas = reaberturas.sort_values("AnoMes")
 
@@ -109,7 +108,7 @@ if uploaded_file:
         st.plotly_chart(fig3, use_container_width=True)
 
         ## 4️⃣ Top 10 Contas com Mais Casos - Nomes resumidos
-        st.subheader("4️⃣ Top 10 Contas com mais casos")
+        st.subheader("4️⃣ Top 10 Contas com Mais Casos")
         top_contas = df_filtrado["Conta_Resumida"].value_counts().nlargest(10).reset_index()
         top_contas.columns = ["Conta", "Total"]
 
@@ -125,7 +124,7 @@ if uploaded_file:
         st.plotly_chart(fig4, use_container_width=True)
 
         ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
-        st.subheader("5️⃣ Casos por responsável (Mensal)")
+        st.subheader("5️⃣ Casos por Responsável (Mensal)")
         casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
