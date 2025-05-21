@@ -13,7 +13,7 @@ if uploaded_file:
 
     # Colunas auxiliares
     df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')  # Para ordenação
-    df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
+    df["Mes_Ano"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
     df["Ano"] = df["Abertura"].dt.year
     
     # Pré-processamento para o Top 10 Contas
@@ -43,16 +43,16 @@ if uploaded_file:
         # Criar ordenação cronológica
         df_ordenado = df_filtrado.sort_values("AnoMes")
         meses_ordenados = df_ordenado["AnoMes"].unique()
-        meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
+        meses_display_ordenados = df_ordenado["Mes_Ano"].unique()
 
         ## 1️⃣ Total de Casos por Mês
         st.subheader("1️⃣ Total de Casos por mês")
-        casos_mes = df_filtrado.groupby(["AnoMes", "AnoMes_Display"]).size().reset_index(name="Total")
+        casos_mes = df_filtrado.groupby(["AnoMes", "Mes_Ano"]).size().reset_index(name="Total")
         casos_mes = casos_mes.sort_values("AnoMes")
 
         fig1 = px.bar(
             casos_mes, 
-            x="AnoMes_Display", 
+            x="Mes_Ano", 
             y="Total", 
             text="Total", 
             title="Total de Casos por Mês"
@@ -67,12 +67,12 @@ if uploaded_file:
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
         st.subheader("2️⃣ Casos por origem")
-        casos_origem = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Origem"]).size().reset_index(name="Total")
+        casos_origem = df_filtrado.groupby(["AnoMes", "Mes_Ano", "Origem"]).size().reset_index(name="Total")
         casos_origem = casos_origem.sort_values("AnoMes")
 
         fig2 = px.bar(
             casos_origem, 
-            x="AnoMes_Display", 
+            x="Mes_Ano", 
             y="Total", 
             color="Origem", 
             text="Total", 
@@ -89,12 +89,12 @@ if uploaded_file:
 
         ## 3️⃣ Reaberturas por Mês - Agora com barras
         st.subheader("3️⃣ Reaberturas por mês")
-        reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
+        reaberturas = df_filtrado.groupby(["AnoMes", "Mes_Ano"])["Qt Reab."].sum().reset_index()
         reaberturas = reaberturas.sort_values("AnoMes")
 
         fig3 = px.bar(
             reaberturas, 
-            x="AnoMes_Display", 
+            x="Mes_Ano", 
             y="Qt Reab.", 
             text="Qt Reab.", 
             title="Reaberturas por Mês"
@@ -125,12 +125,12 @@ if uploaded_file:
 
         ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
         st.subheader("5️⃣ Casos por Responsável (Mensal)")
-        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
+        casos_resp = df_filtrado.groupby(["AnoMes", "Mes_Ano", "Responsável"]).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
         fig5 = px.bar(
             casos_resp, 
-            x="AnoMes_Display", 
+            x="Mes_Ano", 
             y="Total", 
             color="Responsável", 
             text="Total", 
