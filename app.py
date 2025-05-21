@@ -52,7 +52,7 @@ if uploaded_file:
 
         fig1 = px.bar(
             casos_mes, 
-            x=" ", 
+            x="xxxxxxx", 
             y="Total", 
             text="Total", 
             title="Total de Casos por Mês"
