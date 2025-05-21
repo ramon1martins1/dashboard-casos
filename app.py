@@ -13,11 +13,11 @@ if uploaded_file:
 
     # Colunas auxiliares
     df["AnoMes_Ord"] = df["Abertura"].dt.to_period("M").dt.to_timestamp()
-    df["AnoMes"] = df["AnoMes_Ord"].dt.strftime('%Y-%m')
-    df["Ano"] = df["Abertura"].dt.year.astype(int)  # Corrige 2025.0
+    df["AnoMes"] = df["AnoMes_Ord"].dt.strftime('%b/%Y')  # Ex: Jan/2025
+    df["Ano"] = df["Abertura"].dt.year  # sem .astype(int)
 
     # Filtros
-    anos = sorted(df["Ano"].dropna().unique())
+    anos = sorted(df["Ano"].dropna().astype(int).unique())  # Aqui sim pode forçar int
     origens = sorted(df["Origem"].dropna().unique())
     responsaveis = sorted(df["Responsável"].dropna().unique())
 
@@ -42,7 +42,6 @@ if uploaded_file:
                      .drop_duplicates()
                      .sort_values("AnoMes_Ord"))["AnoMes"].tolist()
 
-        # Função auxiliar para transformar em categoria ordenada
         def categorizar(df_plot):
             df_plot["AnoMes"] = pd.Categorical(df_plot["AnoMes"], categories=ordem_mes, ordered=True)
             return df_plot
