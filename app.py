@@ -52,7 +52,7 @@ if uploaded_file:
 
         fig1 = px.bar(
             casos_mes, 
-            x="xxxxxxx", 
+            x="Mês", 
             y="Total", 
             text="Total", 
             title="Total de Casos por Mês"
@@ -72,7 +72,7 @@ if uploaded_file:
 
         fig2 = px.bar(
             casos_origem, 
-            x=" ", 
+            x="Mês", 
             y="Total", 
             color="Origem", 
             text="Total", 
@@ -94,7 +94,7 @@ if uploaded_file:
 
         fig3 = px.bar(
             reaberturas, 
-            x=" ", 
+            x="Mês", 
             y="Qt Reab.", 
             text="Qt Reab.", 
             title="Reaberturas por Mês"
@@ -130,7 +130,7 @@ if uploaded_file:
 
         fig5 = px.bar(
             casos_resp, 
-            x=" ", 
+            x="Mês", 
             y="Total", 
             color="Responsável", 
             text="Total", 
