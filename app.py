@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Dashboard de Casos", layout="wide")
+st.set_page_config(page_title="Dashboard de Casos - E2 Administrativo", layout="wide")
 
 st.title("📊 Dashboard de Casos")
 
@@ -46,13 +46,13 @@ if uploaded_file:
         meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
 
         ## 1️⃣ Total de Casos por Mês
-        st.subheader("1️⃣ Total de Casos por Mês")
+        st.subheader("1️⃣ Total de Casos por mês")
         casos_mes = df_filtrado.groupby(["AnoMes", "AnoMes_Display"]).size().reset_index(name="Total")
         casos_mes = casos_mes.sort_values("AnoMes")
 
         fig1 = px.bar(
             casos_mes, 
-            x="AnoMes_Display", 
+            x=" ", 
             y="Total", 
             text="Total", 
             title="Total de Casos por Mês"
@@ -66,13 +66,13 @@ if uploaded_file:
         st.plotly_chart(fig1, use_container_width=True)
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
-        st.subheader("2️⃣ Casos por Origem (Mensal)")
+        st.subheader("2️⃣ Casos por origem")
         casos_origem = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Origem"]).size().reset_index(name="Total")
         casos_origem = casos_origem.sort_values("AnoMes")
 
         fig2 = px.bar(
             casos_origem, 
-            x="AnoMes_Display", 
+            x=" ", 
             y="Total", 
             color="Origem", 
             text="Total", 
@@ -88,13 +88,13 @@ if uploaded_file:
         st.plotly_chart(fig2, use_container_width=True)
 
         ## 3️⃣ Reaberturas por Mês - Agora com barras
-        st.subheader("3️⃣ Reaberturas por Mês")
+        st.subheader("3️⃣ Reaberturas por mês")
         reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
         reaberturas = reaberturas.sort_values("AnoMes")
 
         fig3 = px.bar(
             reaberturas, 
-            x="AnoMes_Display", 
+            x=" ", 
             y="Qt Reab.", 
             text="Qt Reab.", 
             title="Reaberturas por Mês"
@@ -108,13 +108,13 @@ if uploaded_file:
         st.plotly_chart(fig3, use_container_width=True)
 
         ## 4️⃣ Top 10 Contas com Mais Casos - Nomes resumidos
-        st.subheader("4️⃣ Top 10 Contas com Mais Casos")
+        st.subheader("4️⃣ Top 10 Contas com mais casos abertos")
         top_contas = df_filtrado["Conta_Resumida"].value_counts().nlargest(10).reset_index()
         top_contas.columns = ["Conta", "Total"]
 
         fig4 = px.bar(
             top_contas, 
-            x="Conta", 
+            x="Cliente", 
             y="Total", 
             text="Total", 
             title="Top 10 Contas (2 primeiras palavras)"
@@ -130,7 +130,7 @@ if uploaded_file:
 
         fig5 = px.bar(
             casos_resp, 
-            x="AnoMes_Display", 
+            x=" ", 
             y="Total", 
             color="Responsável", 
             text="Total", 
