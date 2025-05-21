@@ -134,20 +134,23 @@ if uploaded_file:
         casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável", "Primeiro_Nome"]).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
+        # Converter para lista explícita
+        meses_display_list = list(meses_display_ordenados)
+
         fig5 = px.bar(
             casos_resp, 
             x="AnoMes_Display", 
             y="Total", 
             color="Responsável", 
-            text="Primeiro_Nome",  # Mostra primeiro nome na base da barra
+            text="Primeiro_Nome",
             title="Casos por Responsável",
             barmode='group'
         )
-        
-        # Adicionar linhas verticais para separar meses
-        for mes in meses_display_ordenados[1:]:
+
+        # Adicionar linhas verticais para separar meses (usando a lista agora)
+        for i, mes in enumerate(meses_display_list[1:]):
             fig5.add_vline(
-                x=meses_display_ordenados.index(mes)-0.5, 
+                x=i + 0.5,  # Posição relativa baseada no índice
                 line_width=1, 
                 line_dash="dash", 
                 line_color="gray"
@@ -157,8 +160,8 @@ if uploaded_file:
         fig5.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Alterado para Mês/Ano
+            categoryarray=meses_display_list,
+            title_text="Mês/Ano"
         )
         st.plotly_chart(fig5, use_container_width=True)
 
