@@ -52,7 +52,7 @@ if uploaded_file:
 
         fig1 = px.bar(
             casos_mes, 
-            x="Mês", 
+            x="AnoMes_Display", 
             y="Total", 
             text="Total", 
             title="Total de Casos por Mês"
@@ -72,7 +72,7 @@ if uploaded_file:
 
         fig2 = px.bar(
             casos_origem, 
-            x="Mês", 
+            x="AnoMes_Display", 
             y="Total", 
             color="Origem", 
             text="Total", 
@@ -94,7 +94,7 @@ if uploaded_file:
 
         fig3 = px.bar(
             reaberturas, 
-            x="Mês", 
+            x="AnoMes_Display", 
             y="Qt Reab.", 
             text="Qt Reab.", 
             title="Reaberturas por Mês"
@@ -114,7 +114,7 @@ if uploaded_file:
 
         fig4 = px.bar(
             top_contas, 
-            x="Cliente", 
+            x="Conta", 
             y="Total", 
             text="Total", 
             title="Top 10 Contas (2 primeiras palavras)"
@@ -130,7 +130,7 @@ if uploaded_file:
 
         fig5 = px.bar(
             casos_resp, 
-            x="Mês", 
+            x="AnoMes_Display", 
             y="Total", 
             color="Responsável", 
             text="Total", 
