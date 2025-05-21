@@ -46,7 +46,7 @@ if uploaded_file:
         meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
 
         ## 1️⃣ Total de Casos por Mês
-        st.subheader("1️⃣ Total de Casos por mês")
+        st.subheader("1️⃣ Total de casos por mês")
         casos_mes = df_filtrado.groupby(["AnoMes", "AnoMes_Display"]).size().reset_index(name="Total")
         casos_mes = casos_mes.sort_values("AnoMes")
 
@@ -61,7 +61,8 @@ if uploaded_file:
         fig1.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados
+            categoryarray=meses_display_ordenados,
+            ttitle_text="Mês/Ano"
         )
         st.plotly_chart(fig1, use_container_width=True)
 
