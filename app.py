@@ -4,7 +4,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Dashboard de Casos", layout="wide")
 
-st.title("📊 Dashboard de Casos")
+st.title("📊 Dashboard de Casoss")
 
 uploaded_file = st.file_uploader("Faça upload do arquivo Excel (.xlsx)", type=["xlsx"])
 
