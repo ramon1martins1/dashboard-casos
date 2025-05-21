@@ -61,12 +61,13 @@ if uploaded_file:
         fig1.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados
+            categoryarray=meses_display_ordenados,
+            title_text="Mês/Ano"  # Adicionado título do eixo X
         )
         st.plotly_chart(fig1, use_container_width=True)
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
-        st.subheader("2️⃣ Casos por Origem (Mensal)")
+        st.subheader("2️⃣ Casos por origem (Mensal)")
         casos_origem = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Origem"]).size().reset_index(name="Total")
         casos_origem = casos_origem.sort_values("AnoMes")
 
@@ -83,12 +84,13 @@ if uploaded_file:
         fig2.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados
+            categoryarray=meses_display_ordenados,
+            title_text="Mês/Ano"  # Adicionado título do eixo X
         )
         st.plotly_chart(fig2, use_container_width=True)
 
         ## 3️⃣ Reaberturas por Mês - Agora com barras
-        st.subheader("3️⃣ Reaberturas por Mês")
+        st.subheader("3️⃣ Reaberturas por mês")
         reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
         reaberturas = reaberturas.sort_values("AnoMes")
 
@@ -97,18 +99,19 @@ if uploaded_file:
             x="AnoMes_Display", 
             y="Qt Reab.", 
             text="Qt Reab.", 
-            title="Reaberturas por Mês"
+            title="Reaberturas por mês"
         )
         fig3.update_traces(textposition='outside')
         fig3.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados
+            categoryarray=meses_display_ordenados,
+            title_text="Mês/Ano"  # Adicionado título do eixo X
         )
         st.plotly_chart(fig3, use_container_width=True)
 
         ## 4️⃣ Top 10 Contas com Mais Casos - Nomes resumidos
-        st.subheader("4️⃣ Top 10 Contas com Mais Casos")
+        st.subheader("4️⃣ Top 10 Contas com mais casos")
         top_contas = df_filtrado["Conta_Resumida"].value_counts().nlargest(10).reset_index()
         top_contas.columns = ["Conta", "Total"]
 
@@ -117,7 +120,7 @@ if uploaded_file:
             x="Conta", 
             y="Total", 
             text="Total", 
-            title="Top 10 Contas (2 primeiras palavras)"
+            title="Top 10 contas (2 primeiras palavras)"
         )
         fig4.update_traces(textposition='outside')
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
@@ -141,7 +144,8 @@ if uploaded_file:
         fig5.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados
+            categoryarray=meses_display_ordenados,
+            title_text="Mês/Ano"  # Adicionado título do eixo X
         )
         st.plotly_chart(fig5, use_container_width=True)
 
