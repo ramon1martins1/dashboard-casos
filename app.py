@@ -129,53 +129,41 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Barras com primeiro nome
+       ## 5️⃣ Casos por Responsável (Mensal)
         st.subheader("5️⃣ Casos por Responsável (Mensal)")
-        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável", "Primeiro_Nome"]).size().reset_index(name="Total")
-        casos_resp = casos_resp.sort_values("AnoMes")
 
-        # Criar lista ordenada de meses únicos
-        meses_unicos = casos_resp["AnoMes_Display"].unique().tolist()
+        # Preparar os dados
+        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável", "Primeiro_Nome"])
+                    .size()
+                    .reset_index(name="Total")
+                    .sort_values("AnoMes"))
 
+        # Criar lista ordenada de meses
+        meses_ordenados = casos_resp["AnoMes_Display"].unique().tolist()
+
+        # Criar o gráfico
         fig5 = px.bar(
-            casos_resp, 
-            x="AnoMes_Display", 
-            y="Total", 
-            color="Responsável", 
-            text="Primeiro_Nome",
-            title="Casos por Responsável",
-            barmode='group'
+            casos_resp,
+            x="AnoMes_Display",
+            y="Total",
+            color="Responsável",
+            text="Primeiro_Nome",  # Mostra o primeiro nome na base da barra
+            title="Casos por Responsável (Mensal)",
+            barmode='group',  # Barras lado a lado
+            category_orders={"AnoMes_Display": meses_ordenados}
         )
 
-        # Adicionar linhas verticais entre os meses
-        num_meses = len(meses_unicos)
-        for posicao in range(len(meses_unicos)-1):
-        fig5.add_vline(
-            x=posicao + 0.5,
-            line_width=1,
-            line_dash="dash",
-            line_color="gray"
-    )
-
+        # Configurações de formatação
         fig5.update_traces(
             textposition='inside',
             textangle=0,
             insidetextanchor='middle'
         )
 
-        fig5.update_xaxes(
-            type='category',
-            categoryorder='array',
-            categoryarray=meses_unicos,
-            title_text="Mês/Ano"
-        )
-
         fig5.update_layout(
-            xaxis=dict(
-                tickmode='array',
-                tickvals=list(range(num_meses)),
-                ticktext=meses_unicos
-            )
+            xaxis_title="Mês/Ano",
+            yaxis_title="Total de Casos",
+            xaxis={'type': 'category'}
         )
 
         st.plotly_chart(fig5, use_container_width=True)
