@@ -15,9 +15,8 @@ if uploaded_file:
     df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')  # Para ordenação
     df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
     df["Ano"] = df["Abertura"].dt.year
-    df["Responsavel_Primeiro_Nome"] = df["Responsável"].apply(lambda x: x.split()[0] if pd.notnull(x) else x)
-
-    
+    df["Responsavel_Primeiro_Nome"] = df["Responsável"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+        
     # Pré-processamento para o Top 10 Contas
     df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
 
@@ -122,14 +121,14 @@ if uploaded_file:
             x="Conta", 
             y="Total", 
             text="Total", 
-            title="Top 10 contas (2 primeiras palavras)"
+            title="Top 10 contas"
         )
         fig4.update_traces(textposition='outside')
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
         ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras e primeiro nome
-        st.subheader("5️⃣ Casos por Responsável (Mensal)")
+        st.subheader("5️⃣ Casos por responsável (Mensal)")
 
         casos_resp = df_filtrado.groupby(
             ["AnoMes", "AnoMes_Display", "Responsável", "Responsavel_Primeiro_Nome"]
