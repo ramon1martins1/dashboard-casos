@@ -20,7 +20,7 @@ if uploaded_file:
     df["Primeiro_Nome"] = df["Responsável"].str.split().str[0]
     
     # Pré-processamento para o Top 10 Contas
-    df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x
+    df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
 
     # Filtros
     anos = sorted(df["Ano"].dropna().astype(int).unique())
