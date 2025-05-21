@@ -112,7 +112,7 @@ if uploaded_file:
         st.plotly_chart(fig3, use_container_width=True)
 
         ## 4️⃣ Top 10 Contas com Mais Casos - Nomes resumidos
-        st.subheader("4️⃣ Top 10 Contas com mais casos")
+        st.subheader("4️⃣ Top 10 contas com mais casos")
         top_contas = df_filtrado["Conta_Resumida"].value_counts().nlargest(10).reset_index()
         top_contas.columns = ["Conta", "Total"]
 
@@ -127,29 +127,25 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras e primeiro nome
+        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
         st.subheader("5️⃣ Casos por responsável (Mensal)")
-
-        casos_resp = df_filtrado.groupby(
-            ["AnoMes", "AnoMes_Display", "Responsável", "Responsavel_Primeiro_Nome"]
-        ).size().reset_index(name="Total")
+        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
         casos_resp = casos_resp.sort_values("AnoMes")
 
         fig5 = px.bar(
             casos_resp, 
             x="AnoMes_Display", 
             y="Total", 
-            color="Responsavel_Primeiro_Nome",  # Cor com base no primeiro nome
-            text="Responsavel_Primeiro_Nome",   # Mostra o primeiro nome como texto
-            title="Casos por Responsável",
-            barmode='group'
+            color="Responsável", 
+            text="Total", 
+            title="Casos por responsável",
+            barmode='group'  # Barras lado a lado
         )
         fig5.update_traces(textposition='outside')
         fig5.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"
+            categoryarray=meses_display_ordenados
         )
         st.plotly_chart(fig5, use_container_width=True)
 
