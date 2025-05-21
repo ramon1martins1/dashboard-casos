@@ -129,43 +129,26 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-       ## 5️⃣ Casos por Responsável (Mensal)
+        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
         st.subheader("5️⃣ Casos por Responsável (Mensal)")
+        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
+        casos_resp = casos_resp.sort_values("AnoMes")
 
-        # Preparar os dados
-        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável", "Primeiro_Nome"])
-                    .size()
-                    .reset_index(name="Total")
-                    .sort_values("AnoMes"))
-
-        # Criar lista ordenada de meses
-        meses_ordenados = casos_resp["AnoMes_Display"].unique().tolist()
-
-        # Criar o gráfico
         fig5 = px.bar(
-            casos_resp,
-            x="AnoMes_Display",
-            y="Total",
-            color="Responsável",
-            text="Primeiro_Nome",  # Mostra o primeiro nome na base da barra
-            title="Casos por Responsável (Mensal)",
-            barmode='group',  # Barras lado a lado
-            category_orders={"AnoMes_Display": meses_ordenados}
+            casos_resp, 
+            x="AnoMes_Display", 
+            y="Total", 
+            color="Responsável", 
+            text="Total", 
+            title="Casos por Responsável",
+            barmode='group'  # Barras lado a lado
         )
-
-        # Configurações de formatação
-        fig5.update_traces(
-            textposition='inside',
-            textangle=0,
-            insidetextanchor='middle'
+        fig5.update_traces(textposition='outside')
+        fig5.update_xaxes(
+            type='category', 
+            categoryorder='array', 
+            categoryarray=meses_display_ordenados
         )
-
-        fig5.update_layout(
-            xaxis_title="Mês/Ano",
-            yaxis_title="Total de Casos",
-            xaxis={'type': 'category'}
-        )
-
         st.plotly_chart(fig5, use_container_width=True)
 
         st.success("✅ Dashboard carregado com sucesso!")
