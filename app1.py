@@ -5,7 +5,7 @@ import gdown
 from io import BytesIO
 import requests
 
-st.set_page_config(page_title="Indicadores de dasos", layout="wide")
+st.set_page_config(page_title="Indicadores de dados", layout="wide")
 
 st.title("📊 Indicadores de casos")
 
@@ -23,7 +23,7 @@ def load_data():
         
         df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])
         
-        # Processamento dos dados (igual ao seu código original)
+        # Processamento dos dados
         df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')
         df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')
         df["Ano"] = df["Abertura"].dt.year
@@ -42,22 +42,25 @@ if st.button("🔄 Atualizar Dados"):
 df = load_data()
 
 if df is not None:
-    # Filtros (igual ao seu código original)
+    # Filtros - Adicionando Tipo
     anos = sorted(df["Ano"].dropna().astype(int).unique())
     origens = sorted(df["Origem"].dropna().unique())
     responsaveis = sorted(df["Responsável"].dropna().unique())
+    tipos = sorted(df["Tipo"].dropna().unique())  # Novo filtro para Tipo
 
     st.sidebar.header("🔍 Filtros")
 
     ano_sel = st.sidebar.multiselect("Ano:", anos, default=anos)
     origem_sel = st.sidebar.multiselect("Origem:", origens, default=origens)
     resp_sel = st.sidebar.multiselect("Responsável:", responsaveis, default=responsaveis)
+    tipo_sel = st.sidebar.multiselect("Tipo:", tipos, default=tipos)  # Novo filtro
 
-    # Aplicar filtros
+    # Aplicar filtros - incluindo Tipo
     df_filtrado = df[
         df["Ano"].isin(ano_sel) &
         df["Origem"].isin(origem_sel) &
-        df["Responsável"].isin(resp_sel)
+        df["Responsável"].isin(resp_sel) &
+        df["Tipo"].isin(tipo_sel)  # Aplicando filtro de Tipo
     ]
 
     if df_filtrado.empty:
@@ -189,8 +192,32 @@ if df is not None:
 
         st.plotly_chart(fig5, use_container_width=True)
 
-        ## 6️⃣ Índice de Resolubilidade
-        st.subheader("6️⃣ Índice de Resolubilidade")
+        ## 6️⃣ Casos por Tipo (Mensal) - NOVO GRÁFICO
+        st.subheader("6️⃣ Casos por Tipo (Mensal)")
+        
+        casos_tipo = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Tipo"]).size().reset_index(name="Total")
+        casos_tipo = casos_tipo.sort_values("AnoMes")
+
+        fig6 = px.bar(
+            casos_tipo,
+            x="AnoMes_Display",
+            y="Total",
+            color="Tipo",
+            text="Total",
+            title="Casos por Tipo",
+            barmode='group'
+        )
+        fig6.update_traces(textposition='outside')
+        fig6.update_xaxes(
+            type='category',
+            categoryorder='array',
+            categoryarray=meses_display_ordenados,
+            title_text="Mês/Ano"
+        )
+        st.plotly_chart(fig6, use_container_width=True)
+
+        ## 7️⃣ Índice de Resolubilidade
+        st.subheader("7️⃣ Índice de Resolubilidade")
 
         import calendar
         import plotly.graph_objects as go
@@ -228,11 +255,11 @@ if df is not None:
 
         resumo["%_Resolubilidade"] = (resumo["Resolvidos_Mesmo_Dia"] / resumo["Total_Casos"]) * 100
 
-        fig = go.Figure()
+        fig7 = go.Figure()
 
         x_labels = resumo["Primeiro_Nome"]
 
-        fig.add_trace(go.Bar(
+        fig7.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Total_Casos"],
             name="Total de casos",
@@ -240,7 +267,7 @@ if df is not None:
             textposition="auto"
         ))
 
-        fig.add_trace(go.Bar(
+        fig7.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Resolvidos_Mesmo_Dia"],
             name="Resolvidos no mesmo dia",
@@ -248,7 +275,7 @@ if df is not None:
             textposition="auto"
         ))
 
-        fig.add_trace(go.Scatter(
+        fig7.add_trace(go.Scatter(
             x=x_labels,
             y=resumo["%_Resolubilidade"],
             name="% Resolubilidade",
@@ -258,7 +285,7 @@ if df is not None:
             yaxis="y2"
         ))
 
-        fig.update_layout(
+        fig7.update_layout(
             title=f"Índice de resolubilidade - {mes_escolhido}",
             xaxis_title="Responsável",
             yaxis=dict(title="Quantidade de casos"),
@@ -268,7 +295,7 @@ if df is not None:
             margin=dict(r=100)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig7, use_container_width=True)
 
         st.success(f"✅ Dashboard atualizado em {pd.Timestamp.now().strftime('%H:%M:%S')}")
 else:

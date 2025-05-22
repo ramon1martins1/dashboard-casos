@@ -11,23 +11,61 @@ st.title("📊 Indicadores de casos")
 
 # Configuração do Google Drive
 @st.cache_data(ttl=300)  # Cache por 5 minutos
+#with st.spinner("Carregando dados..."):
 def load_data():
     # URL do seu arquivo (modificada para o formato de download direto)
     file_id = "1SqSOc1xsb1i9hxq2OziyxWHrG3GAs450"
     url = f"https://drive.google.com/uc?id={file_id}"
+
+    responsaveis_outros = [
+        "Alexsandro Fernandes Maffei",
+        "Ana Caroline Mendes Carvalho",
+        "Brenda Bertotti Ribeiro",
+        "Bruno Macagnan Do Nascimento",
+        "Cleiton Bitencourt De Souza",
+        "Cristian Macagnan Reus",
+        "Douglas Gonçalves E Barra",
+        "Fabiana Bressan",
+        "Filipe Dos Santos Batista",
+        "Guilherme De Costa Sonego",
+        "Guilherme Medeiros Rodrigues",
+        "Henrique Da Rosa Josefino",
+        "Inaiá Rovaris",
+        "João Victor Dagostin Dos Santos",
+        "João Vitor Ghellere",
+        "Jose Victor Padilha Inacio",
+        "Kenny Robert Rodrigues",
+        "Lucas Demetrio De Abreu",
+        "Lucas Demetrio Pizzoni",
+        "Lucas Jacques Costa",
+        "Luiz Gustavo Uggioni Savi",
+        "Marlon De Bem",
+        "Otomar Rocha Speck",
+        "Outro",
+        "Rafael Dias Rocha (Rafa)",
+        "Ramiriz Leal",
+        "Susan Carboni"
+    ]
     
+    def agrupar_responsavel(nome):
+        if nome in responsaveis_outros:
+            return "Outro"
+        return nome
+
     try:
         # Usando gdown para baixar o arquivo
         output = 'temp_file.xlsx'
         gdown.download(url, output, quiet=True)
         
-        df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])
+        df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])       
+    
         
         # Processamento dos dados
         df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')
         df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')
         df["Ano"] = df["Abertura"].dt.year
         df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+        df['Responsável'] = df['Responsável'].apply(agrupar_responsavel)
         
         return df
     except Exception as e:
@@ -40,6 +78,7 @@ if st.button("🔄 Atualizar Dados"):
 
 # Carrega os dados
 df = load_data()
+
 
 if df is not None:
     # Filtros - Adicionando Tipo
