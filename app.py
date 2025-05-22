@@ -187,10 +187,10 @@ if uploaded_file:
         st.subheader("🎯 Índice de Resolubilidade")
 
         # Criar coluna: resolvido no mesmo dia?
-        df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Data_Abertura"] == df_filtrado["Data_Resolucao"]
+        df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Abertura"] == df_filtrado["Data_Resolucao"]
 
         # Extrair mês para agrupamento
-        df_filtrado["AnoMes"] = df_filtrado["Data_Abertura"].dt.to_period("M")
+        df_filtrado["AnoMes"] = df_filtrado["Abertura"].dt.to_period("M")
         df_filtrado["AnoMes_Display"] = df_filtrado["AnoMes"].astype(str)
 
         # Primeiro nome
@@ -230,14 +230,14 @@ if uploaded_file:
         fig.add_trace(go.Bar(
             x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
             y=resolucao_pivot["Mesmo_Dia"],
-            name="Resolvido no Mesmo Dia"
+            name="Resolvido no mesmo Dia"
         ))
 
         # Barras: Dias Diferentes
         fig.add_trace(go.Bar(
             x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
             y=resolucao_pivot["Dias_Diferentes"],
-            name="Resolvido em Dias Diferentes"
+            name="Resolvido em dias diferentes"
         ))
 
         # Linha: % Resolubilidade
@@ -251,9 +251,9 @@ if uploaded_file:
 
         # Layout com eixos secundários
         fig.update_layout(
-            title="Índice de Resolubilidade por Responsável e Mês",
+            title="Índice de resolubilidade por responsável e mês",
             xaxis_title="Mês - Responsável",
-            yaxis_title="Quantidade de Casos",
+            yaxis_title="Quantidade de casos",
             yaxis2=dict(
                 title="% Resolubilidade",
                 overlaying="y",
