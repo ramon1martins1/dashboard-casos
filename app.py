@@ -5,9 +5,9 @@ import gdown
 from io import BytesIO
 import requests
 
-st.set_page_config(page_title="Dashboard de Casos", layout="wide")
+st.set_page_config(page_title="Indicadores de dasos", layout="wide")
 
-st.title("📊 Dashboard de Casos")
+st.title("📊 Indicadores de casos")
 
 # Configuração do Google Drive
 @st.cache_data(ttl=300)  # Cache por 5 minutos
