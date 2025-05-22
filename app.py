@@ -127,10 +127,27 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
+        ## 5️⃣ Casos por Responsável (Mensal) - Ordenado por quantidade
         st.subheader("5️⃣ Casos por responsável (Mensal)")
-        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
-        casos_resp = casos_resp.sort_values("AnoMes")
+
+        # Ordenar por mês e por total (decrescente)
+        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"])
+                    .size()
+                    .reset_index(name="Total")
+                    .sort_values(["AnoMes", "Total"], ascending=[True, False]))
+
+        # Criar a ordem dos responsáveis para cada mês
+        ordem_responsaveis = (casos_resp.sort_values("Total", ascending=False)
+                            .groupby("AnoMes")["Responsável"]
+                            .apply(list)
+                            .to_dict())
+
+        # Criar coluna de ordenação personalizada
+        casos_resp["Ordem"] = casos_resp.apply(
+            lambda row: ordem_responsaveis[row["AnoMes"]].index(row["Responsável"]), axis=1)
+
+        # Ordenar o DataFrame
+        casos_resp = casos_resp.sort_values(["AnoMes", "Ordem"])
 
         fig5 = px.bar(
             casos_resp, 
@@ -138,15 +155,27 @@ if uploaded_file:
             y="Total", 
             color="Responsável", 
             text="Total", 
-            title="Casos por responsável",
-            barmode='group'  # Barras lado a lado
+            title="Casos por responsável (ordenado por quantidade)",
+            barmode='group'
         )
-        fig5.update_traces(textposition='outside')
+
+        fig5.update_traces(
+            textposition='outside',
+            textangle=0
+        )
+
         fig5.update_xaxes(
             type='category', 
             categoryorder='array', 
-            categoryarray=meses_display_ordenados
+            categoryarray=meses_display_ordenados,
+            title_text="Mês/Ano"
         )
+
+        fig5.update_layout(
+            xaxis={'categoryorder':'array'},
+            showlegend=True
+        )
+
         st.plotly_chart(fig5, use_container_width=True)
 
         st.success("✅ Dashboard carregado com sucesso!")
