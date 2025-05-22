@@ -190,7 +190,7 @@ if df is not None:
         st.plotly_chart(fig5, use_container_width=True)
 
         ## 6️⃣ Índice de Resolubilidade
-        st.subheader("🎯 Índice de Resolubilidade")
+        st.subheader("6️⃣ Índice de Resolubilidade")
 
         import calendar
         import plotly.graph_objects as go
