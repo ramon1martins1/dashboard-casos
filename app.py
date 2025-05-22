@@ -127,70 +127,69 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Versão Otimizada
+        ## 5️⃣ Casos por Responsável (Mensal) - Versão Final
         st.subheader("5️⃣ Casos por responsável (Mensal)")
 
-        # Ordenar por mês e por total (decrescente)
+        # 1. Tratar valores vazios/nulos
+        df_filtrado["Responsável"] = df_filtrado["Responsável"].fillna("Não informado")
+
+        # 2. Preparar dados com ordenação correta
         casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"])
                     .size()
                     .reset_index(name="Total")
                     .sort_values(["AnoMes", "Total"], ascending=[True, False]))
 
-        # Criar a ordem dos responsáveis para cada mês
-        ordem_responsaveis = (casos_resp.sort_values("Total", ascending=False)
-                            .groupby("AnoMes")["Responsável"]
-                            .apply(list)
-                            .to_dict())
+        # 3. Definir top 5 responsáveis por volume total (não por mês)
+        top_responsaveis = casos_resp.groupby("Responsável")["Total"].sum().nlargest(5).index.tolist()
 
-        # Criar coluna de ordenação personalizada
-        casos_resp["Ordem"] = casos_resp.apply(
-            lambda row: ordem_responsaveis[row["AnoMes"]].index(row["Responsável"]), axis=1)
+        # 4. Criar categoria consolidada
+        casos_resp["Categoria"] = casos_resp["Responsável"].apply(
+            lambda x: x if x in top_responsaveis else "Outros")
 
-        # Ordenar o DataFrame
-        casos_resp = casos_resp.sort_values(["AnoMes", "Ordem"])
+        # 5. Ordenação final
+        casos_resp = casos_resp.sort_values(["AnoMes", "Categoria", "Total"], 
+                                        ascending=[True, False, False])
 
-        # Limitar a 5 principais responsáveis por mês para melhor visualização
-        top_responsaveis = (casos_resp.groupby("Responsável")["Total"].sum()
-                            .nlargest(5).index.tolist())
-        casos_resp["Responsavel_Exibicao"] = casos_resp["Responsável"].where(
-            casos_resp["Responsável"].isin(top_responsaveis), "Outros")
-
+        # 6. Criar gráfico
         fig5 = px.bar(
-            casos_resp, 
-            x="AnoMes_Display", 
-            y="Total", 
-            color="Responsavel_Exibicao", 
-            text="Total", 
-            title="Casos por responsável (Top 5 por mês)",
-            barmode='group',
-            category_orders={"Responsavel_Exibicao": top_responsaveis + ["Outros"]}
+            casos_resp,
+            x="AnoMes_Display",
+            y="Total",
+            color="Categoria",
+            text="Total",
+            title="Casos por responsável (Top 5 + Outros)",
+            category_orders={
+                "AnoMes_Display": meses_display_ordenados,
+                "Categoria": top_responsaveis + ["Outros", "Não informado"]
+            },
+            color_discrete_sequence=px.colors.qualitative.Plotly + ["#CCCCCC", "#999999"]
         )
 
+        # 7. Ajustes finos
         fig5.update_traces(
+            texttemplate='%{text:.0f}',
             textposition='outside',
-            textangle=0,
-            textfont_size=10
-        )
-
-        fig5.update_xaxes(
-            type='category', 
-            categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"
+            textfont_size=10,
+            marker_line_width=0
         )
 
         fig5.update_layout(
-            legend=dict(
-                title="Responsáveis",
-                orientation="h",
-                yanchor="bottom",
-                y=-0.5,
-                xanchor="center",
-                x=0.5
-            ),
+            barmode='group',
+            xaxis_title="Mês/Ano",
+            yaxis_title="Total de Casos",
+            legend_title_text="Responsáveis",
             uniformtext_minsize=8,
-            uniformtext_mode='hide'
+            hovermode="x unified",
+            xaxis={
+                'type': 'category',
+                'categoryorder': 'array',
+                'categoryarray': meses_display_ordenados
+            }
         )
+
+        # 8. Alternativa para valores sobrepostos
+        if len(casos_resp["Categoria"].unique()) > 6:
+            fig5.update_traces(textposition='auto')
 
         st.plotly_chart(fig5, use_container_width=True)
 
