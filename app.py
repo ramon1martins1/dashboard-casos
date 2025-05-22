@@ -198,12 +198,20 @@ if uploaded_file:
 
         # Formatar como "Jan/2025"
         df_filtrado["Mes_Display"] = df_filtrado["Mes"].apply(lambda x: calendar.month_abbr[x]) + "/" + df_filtrado["Ano"].astype(str)
+        df_filtrado["Mes_Ano_Ordenacao"] = df_filtrado["Ano"] * 100 + df_filtrado["Mes"]
 
         # Primeiro nome
         df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
+        # Obter os meses únicos ordenados pela coluna auxiliar
+        meses_ordenados = (
+            df_filtrado[["Mes_Display", "Mes_Ano_Ordenacao"]]
+            .drop_duplicates()
+            .sort_values("Mes_Ano_Ordenacao")
+        )
+
         # Seletor de mês (apenas 1)
-        meses_disponiveis = sorted(df_filtrado["Mes_Display"].unique())
+        meses_disponiveis = meses_ordenados["Mes_Display"].tolist()
         mes_escolhido = st.selectbox("Selecione o mês:", meses_disponiveis, index=len(meses_disponiveis)-1)
 
         # Filtrar pelo mês escolhido
@@ -237,7 +245,7 @@ if uploaded_file:
         fig.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Total_Casos"],
-            name="Total de Casos",
+            name="Total de casos",
             text=resumo["Total_Casos"],
             textposition="auto"
         ))
@@ -246,7 +254,7 @@ if uploaded_file:
         fig.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Resolvidos_Mesmo_Dia"],
-            name="Resolvidos no Mesmo Dia",
+            name="Resolvidos no mesmo dia",
             text=resumo["Resolvidos_Mesmo_Dia"],
             textposition="auto"
         ))
@@ -267,7 +275,7 @@ if uploaded_file:
             title=f"Índice de resolubilidade - {mes_escolhido}",
             xaxis_title="Responsável",
             yaxis=dict(
-                title="Quantidade de Casos"
+                title="Quantidade de casos"
             ),
             yaxis2=dict(
                 title="% Resolubilidade",
