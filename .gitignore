@@ -1,0 +1,45 @@
+# Ambiente virtual
+venv/
+ENV/
+env/
+.venv/
+
+# Cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de log
+*.log
+
+# Configurações locais
+*.env
+.env.*
+secrets.json
+
+# Dados temporários
+*.db
+*.sqlite3
+
+# Arquivos do Jupyter
+.ipynb_checkpoints/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de pacotes
+*.egg-info/
+dist/
+build/
+
+# Arquivos do Streamlit
+.streamlit/config.toml
+
+# IDEs
+.vscode/
+.idea/
+
+# Arquivos de exportação
+*.xlsx
+*.csv

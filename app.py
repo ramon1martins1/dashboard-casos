@@ -127,69 +127,59 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Versão Final
+        
+        ## 5️⃣ Casos por Responsável (Mensal) - Ordenação Independente por Mês
         st.subheader("5️⃣ Casos por responsável (Mensal)")
 
-        # 1. Tratar valores vazios/nulos
-        df_filtrado["Responsável"] = df_filtrado["Responsável"].fillna("Não informado")
+        # Extrair primeiro nome e tratar dados
+        df_filtrado = df_filtrado.copy()
+        df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
-        # 2. Preparar dados com ordenação correta
-        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"])
+        # Preparar dados com ordenação independente por mês
+        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome"])
                     .size()
-                    .reset_index(name="Total")
-                    .sort_values(["AnoMes", "Total"], ascending=[True, False]))
+                    .reset_index(name="Total"))
 
-        # 3. Definir top 5 responsáveis por volume total (não por mês)
-        top_responsaveis = casos_resp.groupby("Responsável")["Total"].sum().nlargest(5).index.tolist()
+        # Criar uma coluna auxiliar para ordenação dentro de cada mês
+        casos_resp = casos_resp.sort_values(["AnoMes", "Total"], ascending=[True, False])
 
-        # 4. Criar categoria consolidada
-        casos_resp["Categoria"] = casos_resp["Responsável"].apply(
-            lambda x: x if x in top_responsaveis else "Outros")
+        # Criar um campo para eixo x: "Mês - Nome"
+        casos_resp["EixoX"] = casos_resp["AnoMes_Display"] + " - " + casos_resp["Primeiro_Nome"]
 
-        # 5. Ordenação final
-        casos_resp = casos_resp.sort_values(["AnoMes", "Categoria", "Total"], 
-                                        ascending=[True, False, False])
+        # Garantir que o eixo seja tratado como categoria na ordem certa
+        category_order = casos_resp["EixoX"].tolist()
 
-        # 6. Criar gráfico
+        # Criar gráfico
         fig5 = px.bar(
             casos_resp,
-            x="AnoMes_Display",
+            x="Primeiro_Nome",  # Mantemos só o nome simples como eixo X
             y="Total",
-            color="Categoria",
+            color="Primeiro_Nome",
             text="Total",
-            title="Casos por responsável (Top 5 + Outros)",
-            category_orders={
-                "AnoMes_Display": meses_display_ordenados,
-                "Categoria": top_responsaveis + ["Outros", "Não informado"]
-            },
-            color_discrete_sequence=px.colors.qualitative.Plotly + ["#CCCCCC", "#999999"]
+            title="Casos por responsável",
+            facet_col="AnoMes_Display",
+            category_orders={"Primeiro_Nome": casos_resp["Primeiro_Nome"].tolist()}
         )
 
-        # 7. Ajustes finos
+        # Ajustes visuais das barras
         fig5.update_traces(
-            texttemplate='%{text:.0f}',
             textposition='outside',
-            textfont_size=10,
-            marker_line_width=0
+            textangle=0,
+            marker_line_width=0.5
         )
 
+        # Remover legenda lateral
         fig5.update_layout(
-            barmode='group',
-            xaxis_title="Mês/Ano",
-            yaxis_title="Total de Casos",
-            legend_title_text="Responsáveis",
-            uniformtext_minsize=8,
-            hovermode="x unified",
-            xaxis={
-                'type': 'category',
-                'categoryorder': 'array',
-                'categoryarray': meses_display_ordenados
-            }
+            xaxis_title=None,
+            yaxis_title="Total de casos",
+            showlegend=False
         )
 
-        # 8. Alternativa para valores sobrepostos
-        if len(casos_resp["Categoria"].unique()) > 6:
-            fig5.update_traces(textposition='auto')
+        # Remove o "AnoMes_Display=" das anotações de facet
+        fig5.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
+        # Remove títulos automáticos de eixo x
+        fig5.update_xaxes(title_text=None)
 
         st.plotly_chart(fig5, use_container_width=True)
 

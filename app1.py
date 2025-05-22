@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+
 
 st.set_page_config(page_title="Dashboard de Casos", layout="wide")
 
@@ -66,7 +69,7 @@ if uploaded_file:
         st.plotly_chart(fig1, use_container_width=True)
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
-        st.subheader("2️⃣ Casos por Origem (Mensal)")
+        st.subheader("2️⃣ Casos por origem (Mensal)")
         casos_origem = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Origem"]).size().reset_index(name="Total")
         casos_origem = casos_origem.sort_values("AnoMes")
 
@@ -76,7 +79,7 @@ if uploaded_file:
             y="Total", 
             color="Origem", 
             text="Total", 
-            title="Casos por Origem",
+            title="Casos por origem",
             barmode='group'  # Barras lado a lado
         )
         fig2.update_traces(textposition='outside')
@@ -88,7 +91,7 @@ if uploaded_file:
         st.plotly_chart(fig2, use_container_width=True)
 
         ## 3️⃣ Reaberturas por Mês - Agora com barras
-        st.subheader("3️⃣ Reaberturas por Mês")
+        st.subheader("3️⃣ Reaberturas por mês")
         reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
         reaberturas = reaberturas.sort_values("AnoMes")
 
@@ -97,7 +100,7 @@ if uploaded_file:
             x="AnoMes_Display", 
             y="Qt Reab.", 
             text="Qt Reab.", 
-            title="Reaberturas por Mês"
+            title="Reaberturas por mês"
         )
         fig3.update_traces(textposition='outside')
         fig3.update_xaxes(
@@ -108,7 +111,7 @@ if uploaded_file:
         st.plotly_chart(fig3, use_container_width=True)
 
         ## 4️⃣ Top 10 Contas com Mais Casos - Nomes resumidos
-        st.subheader("4️⃣ Top 10 Contas com Mais Casos")
+        st.subheader("4️⃣ Top 10 contas com mais casos")
         top_contas = df_filtrado["Conta_Resumida"].value_counts().nlargest(10).reset_index()
         top_contas.columns = ["Conta", "Total"]
 
@@ -117,32 +120,64 @@ if uploaded_file:
             x="Conta", 
             y="Total", 
             text="Total", 
-            title="Top 10 Contas (2 primeiras palavras)"
+            title="Top 10 Contas"
         )
         fig4.update_traces(textposition='outside')
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
         ## 5️⃣ Casos por Responsável (Mensal) - Agora com barras
-        st.subheader("5️⃣ Casos por Responsável (Mensal)")
-        casos_resp = df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Responsável"]).size().reset_index(name="Total")
-        casos_resp = casos_resp.sort_values("AnoMes")
+        st.subheader("5️⃣ Casos por responsável (Mensal)1")
 
+        # Extrair primeiro nome e tratar dados
+        df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
+
+        # Preparar dados com ordenação independente por mês
+        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome"])
+                    .size()
+                    .reset_index(name="Total"))
+
+        # Criar uma coluna auxiliar para ordenação dentro de cada mês
+        casos_resp = casos_resp.sort_values(["AnoMes", "Total"], ascending=[True, False])
+
+        # Criar um campo para eixo x: "Mês - Nome"
+        casos_resp["EixoX"] = casos_resp["AnoMes_Display"] + " - " + casos_resp["Primeiro_Nome"]
+
+        # Garantir que o eixo seja tratado como categoria na ordem certa
+        category_order = casos_resp["EixoX"].tolist()
+
+        # Criar gráfico
         fig5 = px.bar(
-            casos_resp, 
-            x="AnoMes_Display", 
-            y="Total", 
-            color="Responsável", 
-            text="Total", 
-            title="Casos por Responsável",
-            barmode='group'  # Barras lado a lado
+            casos_resp,
+            x="Primeiro_Nome",  # Mantemos só o nome simples como eixo X
+            y="Total",
+            color="Primeiro_Nome",
+            text="Total",
+            title="Casos por responsável",
+            facet_col="AnoMes_Display",
+            category_orders={"Primeiro_Nome": casos_resp["Primeiro_Nome"].tolist()}
         )
-        fig5.update_traces(textposition='outside')
-        fig5.update_xaxes(
-            type='category', 
-            categoryorder='array', 
-            categoryarray=meses_display_ordenados
+
+        # Ajustes visuais das barras
+        fig5.update_traces(
+            textposition='outside',
+            textangle=0,
+            marker_line_width=0.5
         )
+
+        # Remover legenda lateral
+        fig5.update_layout(
+            xaxis_title=None,
+            yaxis_title="Total de casos",
+            showlegend=False
+        )
+
+        # Remove o "AnoMes_Display=" das anotações de facet
+        fig5.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
+        # Remove títulos automáticos de eixo x
+        fig5.update_xaxes(title_text=None)
+
         st.plotly_chart(fig5, use_container_width=True)
 
         st.success("✅ Dashboard carregado com sucesso!")
