@@ -183,7 +183,7 @@ if uploaded_file:
 
         st.plotly_chart(fig5, use_container_width=True)
 
-         ## [6] Índice de Resolubilidade
+        # [6] Índice de Resolubilidade
         st.subheader("🎯 Índice de Resolubilidade")
 
         # Criar coluna: resolvido no mesmo dia?
@@ -196,29 +196,25 @@ if uploaded_file:
         # Primeiro nome
         df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
-        # Contar casos resolvidos no mesmo dia
-        resolucao = (df_filtrado
-                    .groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome", "Resolvido_Mesmo_Dia"])
+        # Total de casos por mês e responsável
+        total_casos = (df_filtrado
+                    .groupby(["AnoMes_Display", "Primeiro_Nome"])
                     .size()
-                    .reset_index(name="Total"))
+                    .reset_index(name="Total_Casos"))
 
-        # Pivotar para facilitar
-        resolucao_pivot = resolucao.pivot_table(
-            index=["AnoMes", "AnoMes_Display", "Primeiro_Nome"],
-            columns="Resolvido_Mesmo_Dia",
-            values="Total",
-            fill_value=0
-        ).reset_index()
+        # Total resolvidos no mesmo dia
+        resolvidos_mesmo_dia = (df_filtrado[df_filtrado["Resolvido_Mesmo_Dia"]]
+                                .groupby(["AnoMes_Display", "Primeiro_Nome"])
+                                .size()
+                                .reset_index(name="Resolvidos_Mesmo_Dia"))
 
-        # Renomear colunas
-        resolucao_pivot = resolucao_pivot.rename(columns={
-            True: "Mesmo_Dia",
-            False: "Dias_Diferentes"
-        })
+        # Mesclar
+        resumo = pd.merge(total_casos, resolvidos_mesmo_dia,
+                        on=["AnoMes_Display", "Primeiro_Nome"],
+                        how="left").fillna(0)
 
-        # Total e percentual
-        resolucao_pivot["Total"] = resolucao_pivot["Mesmo_Dia"] + resolucao_pivot["Dias_Diferentes"]
-        resolucao_pivot["%_Resolubilidade"] = (resolucao_pivot["Mesmo_Dia"] / resolucao_pivot["Total"]).fillna(0) * 100
+        # Calcular percentual
+        resumo["%_Resolubilidade"] = (resumo["Resolvidos_Mesmo_Dia"] / resumo["Total_Casos"]) * 100
 
         # Criar gráfico
         import plotly.express as px
@@ -226,45 +222,39 @@ if uploaded_file:
 
         fig = go.Figure()
 
-        # Barras: Mesmo Dia
+        x_labels = resumo["AnoMes_Display"] + " - " + resumo["Primeiro_Nome"]
+
+        # Barra 1: Total de casos
         fig.add_trace(go.Bar(
-            x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
-            y=resolucao_pivot["Mesmo_Dia"],
-            name="Resolvido no mesmo Dia"
+            x=x_labels,
+            y=resumo["Total_Casos"],
+            name="Total de Casos"
         ))
 
-        # Barras: Dias Diferentes
+        # Barra 2: Resolvidos no mesmo dia
         fig.add_trace(go.Bar(
-            x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
-            y=resolucao_pivot["Dias_Diferentes"],
-            name="Resolvido em dias diferentes"
+            x=x_labels,
+            y=resumo["Resolvidos_Mesmo_Dia"],
+            name="Resolvidos no Mesmo Dia"
         ))
 
-        # Linha: % Resolubilidade
-        fig.add_trace(go.Scatter(
-            x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
-            y=resolucao_pivot["%_Resolubilidade"],
-            name="% Resolubilidade",
-            mode="lines+markers",
-            yaxis="y2"
+        # Barra 3: % Resolubilidade
+        fig.add_trace(go.Bar(
+            x=x_labels,
+            y=resumo["%_Resolubilidade"],
+            name="% Resolubilidade"
         ))
 
-        # Layout com eixos secundários
+        # Layout
         fig.update_layout(
             title="Índice de resolubilidade por responsável e mês",
             xaxis_title="Mês - Responsável",
-            yaxis_title="Quantidade de casos",
-            yaxis2=dict(
-                title="% Resolubilidade",
-                overlaying="y",
-                side="right"
-            ),
+            yaxis_title="Valores",
             barmode="group",
             legend_title="Legenda"
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
 
         st.success("✅ Dashboard carregado com sucesso!")
 else:
