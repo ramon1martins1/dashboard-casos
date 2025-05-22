@@ -186,52 +186,52 @@ if uploaded_file:
         # [6] Índice de Resolubilidade
         st.subheader("🎯 Índice de Resolubilidade")
 
+        import calendar
+        import plotly.graph_objects as go
+
         # Criar coluna: resolvido no mesmo dia?
         df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Abertura"] == df_filtrado["Solução"]
 
-        # Extrair mês para agrupamento
-        df_filtrado["AnoMes"] = df_filtrado["Abertura"].dt.to_period("M")
-        df_filtrado["AnoMes_Display"] = df_filtrado["AnoMes"].astype(str)
+        # Extrair mês e ano
+        df_filtrado["Ano"] = df_filtrado["Abertura"].dt.year
+        df_filtrado["Mes"] = df_filtrado["Abertura"].dt.month
+
+        # Formatar como "Jan/2025"
+        df_filtrado["Mes_Display"] = df_filtrado["Mes"].apply(lambda x: calendar.month_abbr[x]) + "/" + df_filtrado["Ano"].astype(str)
 
         # Primeiro nome
         df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
-        # Seletor múltiplo de meses
-        meses_disponiveis = sorted(df_filtrado["AnoMes_Display"].unique())
-        meses_escolhidos = st.multiselect("Selecione os meses:", meses_disponiveis, default=meses_disponiveis[-1:])
+        # Seletor de mês (apenas 1)
+        meses_disponiveis = sorted(df_filtrado["Mes_Display"].unique())
+        mes_escolhido = st.selectbox("Selecione o mês:", meses_disponiveis, index=len(meses_disponiveis)-1)
 
-        # Filtrar pelos meses escolhidos
-        df_mes = df_filtrado[df_filtrado["AnoMes_Display"].isin(meses_escolhidos)]
+        # Filtrar pelo mês escolhido
+        df_mes = df_filtrado[df_filtrado["Mes_Display"] == mes_escolhido]
 
-        # Total de casos por responsável e mês
+        # Total de casos por responsável
         total_casos = (df_mes
-                    .groupby(["AnoMes_Display", "Primeiro_Nome"])
+                    .groupby("Primeiro_Nome")
                     .size()
                     .reset_index(name="Total_Casos"))
 
         # Total resolvidos no mesmo dia
         resolvidos_mesmo_dia = (df_mes[df_mes["Resolvido_Mesmo_Dia"]]
-                                .groupby(["AnoMes_Display", "Primeiro_Nome"])
+                                .groupby("Primeiro_Nome")
                                 .size()
                                 .reset_index(name="Resolvidos_Mesmo_Dia"))
 
         # Mesclar
         resumo = pd.merge(total_casos, resolvidos_mesmo_dia,
-                        on=["AnoMes_Display", "Primeiro_Nome"],
-                        how="left").fillna(0)
+                        on="Primeiro_Nome", how="left").fillna(0)
 
         # Calcular percentual
         resumo["%_Resolubilidade"] = (resumo["Resolvidos_Mesmo_Dia"] / resumo["Total_Casos"]) * 100
 
-        # Criar rótulo: "Mês - Responsável"
-        resumo["Label"] = resumo["AnoMes_Display"] + " - " + resumo["Primeiro_Nome"]
-
         # Criar gráfico
-        import plotly.graph_objects as go
-
         fig = go.Figure()
 
-        x_labels = resumo["Label"]
+        x_labels = resumo["Primeiro_Nome"]
 
         # Barra 1: Total de casos
         fig.add_trace(go.Bar(
@@ -262,10 +262,10 @@ if uploaded_file:
             yaxis="y2"
         ))
 
-        # Layout com eixos secundários
+        # Layout com espaçamento maior da legenda
         fig.update_layout(
-            title="Índice de resolubilidade por responsável e mês",
-            xaxis_title="Mês - Responsável",
+            title=f"Índice de resolubilidade - {mes_escolhido}",
+            xaxis_title="Responsável",
             yaxis=dict(
                 title="Quantidade de Casos"
             ),
@@ -275,11 +275,15 @@ if uploaded_file:
                 side="right"
             ),
             barmode="group",
-            legend_title="Legenda"
+            legend=dict(
+                title="Legenda",
+                x=1.05,  # move a legenda para mais à direita
+                y=1
+            ),
+            margin=dict(r=100)  # aumenta a margem direita
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
 
         st.success("✅ Dashboard carregado com sucesso!")
 else:
