@@ -11,7 +11,7 @@ st.title("📊 Indicadores de casos")
 
 # Configuração do Google Drive
 @st.cache_data(ttl=300)  # Cache por 5 minutos
-#with st.spinner("Carregando dados..."):
+
 def load_data():
     # URL do seu arquivo (modificada para o formato de download direto)
     file_id = "1SqSOc1xsb1i9hxq2OziyxWHrG3GAs450"
@@ -76,9 +76,11 @@ def load_data():
 if st.button("🔄 Atualizar Dados"):
     st.cache_data.clear()
 
-# Carrega os dados
-df = load_data()
+with st.spinner("Carregando dados..."):
+    df = load_data()
 
+if df is None:
+    st.error("Falha ao carregar os dados.") 
 
 if df is not None:
     # Filtros - Adicionando Tipo
