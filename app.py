@@ -1,26 +1,48 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import gdown
+from io import BytesIO
+import requests
 
 st.set_page_config(page_title="Dashboard de Casos", layout="wide")
 
 st.title("📊 Dashboard de Casos")
 
-uploaded_file = st.file_uploader("Faça upload do arquivo Excel (.xlsx)", type=["xlsx"])
-
-if uploaded_file:
-    df = pd.read_excel(uploaded_file, parse_dates=["Abertura", "Solução"])
-
-    # Colunas auxiliares
-    df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')  # Para ordenação
-    df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')  # Para exibição
-    df["Ano"] = df["Abertura"].dt.year
-    #df["Responsavel_Primeiro_Nome"] = df["Responsável"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+# Configuração do Google Drive
+@st.cache_data(ttl=300)  # Cache por 5 minutos
+def load_data():
+    # URL do seu arquivo (modificada para o formato de download direto)
+    file_id = "1SqSOc1xsb1i9hxq2OziyxWHrG3GAs450"
+    url = f"https://drive.google.com/uc?id={file_id}"
+    
+    try:
+        # Usando gdown para baixar o arquivo
+        output = 'temp_file.xlsx'
+        gdown.download(url, output, quiet=True)
         
-    # Pré-processamento para o Top 10 Contas
-    df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+        df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])
+        
+        # Processamento dos dados (igual ao seu código original)
+        df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')
+        df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')
+        df["Ano"] = df["Abertura"].dt.year
+        df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+        
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar dados: {e}")
+        return None
 
-    # Filtros
+# Botão de refresh
+if st.button("🔄 Atualizar Dados"):
+    st.cache_data.clear()
+
+# Carrega os dados
+df = load_data()
+
+if df is not None:
+    # Filtros (igual ao seu código original)
     anos = sorted(df["Ano"].dropna().astype(int).unique())
     origens = sorted(df["Origem"].dropna().unique())
     responsaveis = sorted(df["Responsável"].dropna().unique())
@@ -63,7 +85,7 @@ if uploaded_file:
             type='category', 
             categoryorder='array', 
             categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Adicionado título do eixo X
+            title_text="Mês/Ano"
         )
         st.plotly_chart(fig1, use_container_width=True)
 
@@ -79,14 +101,14 @@ if uploaded_file:
             color="Origem", 
             text="Total", 
             title="Casos por Origem",
-            barmode='group'  # Barras lado a lado
+            barmode='group'
         )
         fig2.update_traces(textposition='outside')
         fig2.update_xaxes(
             type='category', 
             categoryorder='array', 
             categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Adicionado título do eixo X
+            title_text="Mês/Ano"
         )
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -107,7 +129,7 @@ if uploaded_file:
             type='category', 
             categoryorder='array', 
             categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"  # Adicionado título do eixo X
+            title_text="Mês/Ano"
         )
         st.plotly_chart(fig3, use_container_width=True)
 
@@ -127,32 +149,21 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        
-        ## 5️⃣ Casos por Responsável (Mensal) - Ordenação Independente por Mês
+        ## 5️⃣ Casos por Responsável (Mensal)
         st.subheader("5️⃣ Casos por responsável (Mensal)")
-
-        # Extrair primeiro nome e tratar dados
+        
         df_filtrado = df_filtrado.copy()
         df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
-        # Preparar dados com ordenação independente por mês
         casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome"])
                     .size()
                     .reset_index(name="Total"))
 
-        # Criar uma coluna auxiliar para ordenação dentro de cada mês
         casos_resp = casos_resp.sort_values(["AnoMes", "Total"], ascending=[True, False])
 
-        # Criar um campo para eixo x: "Mês - Nome"
-        casos_resp["EixoX"] = casos_resp["AnoMes_Display"] + " - " + casos_resp["Primeiro_Nome"]
-
-        # Garantir que o eixo seja tratado como categoria na ordem certa
-        category_order = casos_resp["EixoX"].tolist()
-
-        # Criar gráfico
         fig5 = px.bar(
             casos_resp,
-            x="Primeiro_Nome",  # Mantemos só o nome simples como eixo X
+            x="Primeiro_Nome",
             y="Total",
             color="Primeiro_Nome",
             text="Total",
@@ -161,87 +172,66 @@ if uploaded_file:
             category_orders={"Primeiro_Nome": casos_resp["Primeiro_Nome"].tolist()}
         )
 
-        # Ajustes visuais das barras
         fig5.update_traces(
             textposition='outside',
             textangle=0,
             marker_line_width=0.5
         )
 
-        # Remover legenda lateral
         fig5.update_layout(
             xaxis_title=None,
             yaxis_title="Total de casos",
             showlegend=False
         )
 
-        # Remove o "AnoMes_Display=" das anotações de facet
         fig5.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-
-        # Remove títulos automáticos de eixo x
         fig5.update_xaxes(title_text=None)
 
         st.plotly_chart(fig5, use_container_width=True)
 
-        # [6] Índice de Resolubilidade
+        ## 6️⃣ Índice de Resolubilidade
         st.subheader("🎯 Índice de Resolubilidade")
 
         import calendar
         import plotly.graph_objects as go
 
-        # Criar coluna: resolvido no mesmo dia?
         df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Abertura"] == df_filtrado["Solução"]
-
-        # Extrair mês e ano
         df_filtrado["Ano"] = df_filtrado["Abertura"].dt.year
         df_filtrado["Mes"] = df_filtrado["Abertura"].dt.month
-
-        # Formatar como "Jan/2025"
         df_filtrado["Mes_Display"] = df_filtrado["Mes"].apply(lambda x: calendar.month_abbr[x]) + "/" + df_filtrado["Ano"].astype(str)
         df_filtrado["Mes_Ano_Ordenacao"] = df_filtrado["Ano"] * 100 + df_filtrado["Mes"]
-
-        # Primeiro nome
         df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
-        # Obter os meses únicos ordenados pela coluna auxiliar
         meses_ordenados = (
             df_filtrado[["Mes_Display", "Mes_Ano_Ordenacao"]]
             .drop_duplicates()
             .sort_values("Mes_Ano_Ordenacao")
         )
 
-        # Seletor de mês (apenas 1)
         meses_disponiveis = meses_ordenados["Mes_Display"].tolist()
         mes_escolhido = st.selectbox("Selecione o mês:", meses_disponiveis, index=len(meses_disponiveis)-1)
 
-        # Filtrar pelo mês escolhido
         df_mes = df_filtrado[df_filtrado["Mes_Display"] == mes_escolhido]
 
-        # Total de casos por responsável
         total_casos = (df_mes
                     .groupby("Primeiro_Nome")
                     .size()
                     .reset_index(name="Total_Casos"))
 
-        # Total resolvidos no mesmo dia
         resolvidos_mesmo_dia = (df_mes[df_mes["Resolvido_Mesmo_Dia"]]
                                 .groupby("Primeiro_Nome")
                                 .size()
                                 .reset_index(name="Resolvidos_Mesmo_Dia"))
 
-        # Mesclar
         resumo = pd.merge(total_casos, resolvidos_mesmo_dia,
                         on="Primeiro_Nome", how="left").fillna(0)
 
-        # Calcular percentual
         resumo["%_Resolubilidade"] = (resumo["Resolvidos_Mesmo_Dia"] / resumo["Total_Casos"]) * 100
 
-        # Criar gráfico
         fig = go.Figure()
 
         x_labels = resumo["Primeiro_Nome"]
 
-        # Barra 1: Total de casos
         fig.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Total_Casos"],
@@ -250,7 +240,6 @@ if uploaded_file:
             textposition="auto"
         ))
 
-        # Barra 2: Resolvidos no mesmo dia
         fig.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Resolvidos_Mesmo_Dia"],
@@ -259,7 +248,6 @@ if uploaded_file:
             textposition="auto"
         ))
 
-        # Linha: % Resolubilidade
         fig.add_trace(go.Scatter(
             x=x_labels,
             y=resumo["%_Resolubilidade"],
@@ -270,29 +258,18 @@ if uploaded_file:
             yaxis="y2"
         ))
 
-        # Layout com espaçamento maior da legenda
         fig.update_layout(
             title=f"Índice de resolubilidade - {mes_escolhido}",
             xaxis_title="Responsável",
-            yaxis=dict(
-                title="Quantidade de casos"
-            ),
-            yaxis2=dict(
-                title="% Resolubilidade",
-                overlaying="y",
-                side="right"
-            ),
+            yaxis=dict(title="Quantidade de casos"),
+            yaxis2=dict(title="% Resolubilidade", overlaying="y", side="right"),
             barmode="group",
-            legend=dict(
-                title="Legenda",
-                x=1.05,  # move a legenda para mais à direita
-                y=1
-            ),
-            margin=dict(r=100)  # aumenta a margem direita
+            legend=dict(title="Legenda", x=1.05, y=1),
+            margin=dict(r=100)
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
-        st.success("✅ Dashboard carregado com sucesso!")
+        st.success(f"✅ Dashboard atualizado em {pd.Timestamp.now().strftime('%H:%M:%S')}")
 else:
-    st.info("Por favor, envie um arquivo Excel para visualizar os dados.")
+    st.error("Não foi possível carregar os dados. Verifique a conexão ou tente novamente mais tarde.")
