@@ -183,6 +183,91 @@ if uploaded_file:
 
         st.plotly_chart(fig5, use_container_width=True)
 
+         ## [6] Índice de Resolubilidade
+        st.subheader("🎯 Índice de Resolubilidade")
+
+        # Criar coluna: resolvido no mesmo dia?
+        df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Data_Abertura"] == df_filtrado["Data_Resolucao"]
+
+        # Extrair mês para agrupamento
+        df_filtrado["AnoMes"] = df_filtrado["Data_Abertura"].dt.to_period("M")
+        df_filtrado["AnoMes_Display"] = df_filtrado["AnoMes"].astype(str)
+
+        # Primeiro nome
+        df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
+
+        # Contar casos resolvidos no mesmo dia
+        resolucao = (df_filtrado
+                    .groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome", "Resolvido_Mesmo_Dia"])
+                    .size()
+                    .reset_index(name="Total"))
+
+        # Pivotar para facilitar
+        resolucao_pivot = resolucao.pivot_table(
+            index=["AnoMes", "AnoMes_Display", "Primeiro_Nome"],
+            columns="Resolvido_Mesmo_Dia",
+            values="Total",
+            fill_value=0
+        ).reset_index()
+
+        # Renomear colunas
+        resolucao_pivot = resolucao_pivot.rename(columns={
+            True: "Mesmo_Dia",
+            False: "Dias_Diferentes"
+        })
+
+        # Total e percentual
+        resolucao_pivot["Total"] = resolucao_pivot["Mesmo_Dia"] + resolucao_pivot["Dias_Diferentes"]
+        resolucao_pivot["%_Resolubilidade"] = (resolucao_pivot["Mesmo_Dia"] / resolucao_pivot["Total"]).fillna(0) * 100
+
+        ---
+
+        # Criar gráfico
+        import plotly.express as px
+        import plotly.graph_objects as go
+
+        fig = go.Figure()
+
+        # Barras: Mesmo Dia
+        fig.add_trace(go.Bar(
+            x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
+            y=resolucao_pivot["Mesmo_Dia"],
+            name="Resolvido no Mesmo Dia"
+        ))
+
+        # Barras: Dias Diferentes
+        fig.add_trace(go.Bar(
+            x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
+            y=resolucao_pivot["Dias_Diferentes"],
+            name="Resolvido em Dias Diferentes"
+        ))
+
+        # Linha: % Resolubilidade
+        fig.add_trace(go.Scatter(
+            x=resolucao_pivot["AnoMes_Display"] + " - " + resolucao_pivot["Primeiro_Nome"],
+            y=resolucao_pivot["%_Resolubilidade"],
+            name="% Resolubilidade",
+            mode="lines+markers",
+            yaxis="y2"
+        ))
+
+        # Layout com eixos secundários
+        fig.update_layout(
+            title="Índice de Resolubilidade por Responsável e Mês",
+            xaxis_title="Mês - Responsável",
+            yaxis_title="Quantidade de Casos",
+            yaxis2=dict(
+                title="% Resolubilidade",
+                overlaying="y",
+                side="right"
+            ),
+            barmode="group",
+            legend_title="Legenda"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
         st.success("✅ Dashboard carregado com sucesso!")
 else:
     st.info("Por favor, envie um arquivo Excel para visualizar os dados.")
