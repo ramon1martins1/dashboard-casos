@@ -220,8 +220,6 @@ if uploaded_file:
         resolucao_pivot["Total"] = resolucao_pivot["Mesmo_Dia"] + resolucao_pivot["Dias_Diferentes"]
         resolucao_pivot["%_Resolubilidade"] = (resolucao_pivot["Mesmo_Dia"] / resolucao_pivot["Total"]).fillna(0) * 100
 
-        ---
-
         # Criar gráfico
         import plotly.express as px
         import plotly.graph_objects as go
