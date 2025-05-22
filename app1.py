@@ -11,23 +11,61 @@ st.title("📊 Indicadores de casos")
 
 # Configuração do Google Drive
 @st.cache_data(ttl=300)  # Cache por 5 minutos
+
 def load_data():
     # URL do seu arquivo (modificada para o formato de download direto)
     file_id = "1SqSOc1xsb1i9hxq2OziyxWHrG3GAs450"
     url = f"https://drive.google.com/uc?id={file_id}"
+
+    responsaveis_outros = [
+        "Alexsandro Fernandes Maffei",
+        "Ana Caroline Mendes Carvalho",
+        "Brenda Bertotti Ribeiro",
+        "Bruno Macagnan Do Nascimento",
+        "Cleiton Bitencourt De Souza",
+        "Cristian Macagnan Reus",
+        "Douglas Gonçalves E Barra",
+        "Fabiana Bressan",
+        "Filipe Dos Santos Batista",
+        "Guilherme De Costa Sonego",
+        "Guilherme Medeiros Rodrigues",
+        "Henrique Da Rosa Josefino",
+        "Inaiá Rovaris",
+        "João Victor Dagostin Dos Santos",
+        "João Vitor Ghellere",
+        "Jose Victor Padilha Inacio",
+        "Kenny Robert Rodrigues",
+        "Lucas Demetrio De Abreu",
+        "Lucas Demetrio Pizzoni",
+        "Lucas Jacques Costa",
+        "Luiz Gustavo Uggioni Savi",
+        "Marlon De Bem",
+        "Otomar Rocha Speck",
+        "Outro",
+        "Rafael Dias Rocha (Rafa)",
+        "Ramiriz Leal",
+        "Susan Carboni"
+    ]
     
+    def agrupar_responsavel(nome):
+        if nome in responsaveis_outros:
+            return "Outro"
+        return nome
+
     try:
         # Usando gdown para baixar o arquivo
         output = 'temp_file.xlsx'
         gdown.download(url, output, quiet=True)
         
-        df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])
+        df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])       
+    
         
         # Processamento dos dados
         df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')
         df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')
         df["Ano"] = df["Abertura"].dt.year
         df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
+        df['Responsável'] = df['Responsável'].apply(agrupar_responsavel)
         
         return df
     except Exception as e:
@@ -38,8 +76,11 @@ def load_data():
 if st.button("🔄 Atualizar Dados"):
     st.cache_data.clear()
 
-# Carrega os dados
-df = load_data()
+with st.spinner("Carregando dados..."):
+    df = load_data()
+
+if df is None:
+    st.error("Falha ao carregar os dados.") 
 
 if df is not None:
     # Filtros - Adicionando Tipo
@@ -73,24 +114,94 @@ if df is not None:
 
         ## 1️⃣ Total de Casos por Mês
         st.subheader("1️⃣ Total de casos por mês")
-        casos_mes = df_filtrado.groupby(["AnoMes", "AnoMes_Display"]).size().reset_index(name="Total")
-        casos_mes = casos_mes.sort_values("AnoMes")
 
+        # 1. Converter ano para string (evita decimais)
+        df_filtrado = df_filtrado.copy()
+        df_filtrado['Ano'] = df_filtrado['Ano'].astype(int).astype(str)
+
+        # 2. Extrair mês e número do mês para ordenação
+        df_filtrado['MesNum'] = df_filtrado['Abertura'].dt.month
+        df_filtrado['MesNome'] = df_filtrado['Abertura'].dt.strftime('%b')
+
+        # 3. Agrupar para obter a contagem de casos
+        casos_mes = df_filtrado.groupby(['MesNum', 'MesNome', 'Ano']).size().reset_index(name='Total')
+
+        # 4. Ordenar por mês e ano
+        casos_mes = casos_mes.sort_values(['MesNum', 'Ano'])
+
+        # 5. Criar uma coluna de posição X personalizada para espaçamento
+        posicao_x = []
+        contador = 0
+        mes_anterior = None
+
+        for i, row in casos_mes.iterrows():
+            mes_atual = row['MesNum']
+            
+            # Se mudou de mês, adiciona espaço extra
+            if mes_anterior is not None and mes_atual != mes_anterior:
+                contador += 1  # Espaço extra entre meses
+            
+            posicao_x.append(contador)
+            contador += 1
+            mes_anterior = mes_atual
+
+        casos_mes['posicao_x'] = posicao_x
+
+        # 6. Criar rótulos para o eixo X
+        casos_mes['MesAno_Label'] = casos_mes['MesNome'] + '/' + casos_mes['Ano']
+
+        # 7. Definir cores por ano
+        cores_por_ano = {
+            '2023': '#ff7f0e',  # Laranja
+            '2024': '#aec7e8',  # Azul claro
+            '2025': '#1f77b4'   # Azul escuro
+        }
+
+        # 8. Criar gráfico com posições personalizadas
         fig1 = px.bar(
-            casos_mes, 
-            x="AnoMes_Display", 
-            y="Total", 
-            text="Total", 
-            title="Total de Casos por Mês"
+            casos_mes,
+            x='posicao_x',
+            y='Total',
+            color='Ano',
+            color_discrete_map=cores_por_ano,
+            text='Total',
+            title='Total de casos por mês'
         )
-        fig1.update_traces(textposition='outside')
+
+        # 9. Configurar o eixo X com os rótulos corretos
         fig1.update_xaxes(
-            type='category', 
-            categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"
+            tickmode='array',
+            tickvals=casos_mes['posicao_x'],
+            ticktext=casos_mes['MesAno_Label'],
+            tickangle=0,
+            title_text='Mês/Ano'
         )
+
+        # 10. Configurações visuais
+        fig1.update_traces(
+            textposition='outside',
+            marker_line_width=0.5,
+            width=0.6  # Largura das barras
+        )
+
+        fig1.update_layout(
+            showlegend=False,  # Remove a legenda
+            bargap=0.3,  # Espaço entre barras do mesmo grupo
+            yaxis_title='Total de Casos',
+            xaxis=dict(
+                showgrid=False,  # Remove grid vertical
+                zeroline=False
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridwidth=0.5,
+                gridcolor='rgba(0,0,0,0.1)'
+            )
+        )
+
         st.plotly_chart(fig1, use_container_width=True)
+
+
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
         st.subheader("2️⃣ Casos por origem (Mensal)")
