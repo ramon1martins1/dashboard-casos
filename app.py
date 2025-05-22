@@ -127,7 +127,7 @@ if uploaded_file:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal) - Ordenado por quantidade
+        ## 5️⃣ Casos por Responsável (Mensal) - Versão Otimizada
         st.subheader("5️⃣ Casos por responsável (Mensal)")
 
         # Ordenar por mês e por total (decrescente)
@@ -149,19 +149,27 @@ if uploaded_file:
         # Ordenar o DataFrame
         casos_resp = casos_resp.sort_values(["AnoMes", "Ordem"])
 
+        # Limitar a 5 principais responsáveis por mês para melhor visualização
+        top_responsaveis = (casos_resp.groupby("Responsável")["Total"].sum()
+                            .nlargest(5).index.tolist())
+        casos_resp["Responsavel_Exibicao"] = casos_resp["Responsável"].where(
+            casos_resp["Responsável"].isin(top_responsaveis), "Outros")
+
         fig5 = px.bar(
             casos_resp, 
             x="AnoMes_Display", 
             y="Total", 
-            color="Responsável", 
+            color="Responsavel_Exibicao", 
             text="Total", 
-            title="Casos por responsável (ordenado por quantidade)",
-            barmode='group'
+            title="Casos por responsável (Top 5 por mês)",
+            barmode='group',
+            category_orders={"Responsavel_Exibicao": top_responsaveis + ["Outros"]}
         )
 
         fig5.update_traces(
             textposition='outside',
-            textangle=0
+            textangle=0,
+            textfont_size=10
         )
 
         fig5.update_xaxes(
@@ -172,8 +180,16 @@ if uploaded_file:
         )
 
         fig5.update_layout(
-            xaxis={'categoryorder':'array'},
-            showlegend=True
+            legend=dict(
+                title="Responsáveis",
+                orientation="h",
+                yanchor="bottom",
+                y=-0.5,
+                xanchor="center",
+                x=0.5
+            ),
+            uniformtext_minsize=8,
+            uniformtext_mode='hide'
         )
 
         st.plotly_chart(fig5, use_container_width=True)
