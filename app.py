@@ -196,14 +196,21 @@ if uploaded_file:
         # Primeiro nome
         df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
 
-        # Total de casos por mês e responsável
-        total_casos = (df_filtrado
+        # Seletor múltiplo de meses
+        meses_disponiveis = sorted(df_filtrado["AnoMes_Display"].unique())
+        meses_escolhidos = st.multiselect("Selecione os meses:", meses_disponiveis, default=meses_disponiveis[-1:])
+
+        # Filtrar pelos meses escolhidos
+        df_mes = df_filtrado[df_filtrado["AnoMes_Display"].isin(meses_escolhidos)]
+
+        # Total de casos por responsável e mês
+        total_casos = (df_mes
                     .groupby(["AnoMes_Display", "Primeiro_Nome"])
                     .size()
                     .reset_index(name="Total_Casos"))
 
         # Total resolvidos no mesmo dia
-        resolvidos_mesmo_dia = (df_filtrado[df_filtrado["Resolvido_Mesmo_Dia"]]
+        resolvidos_mesmo_dia = (df_mes[df_mes["Resolvido_Mesmo_Dia"]]
                                 .groupby(["AnoMes_Display", "Primeiro_Nome"])
                                 .size()
                                 .reset_index(name="Resolvidos_Mesmo_Dia"))
@@ -216,45 +223,63 @@ if uploaded_file:
         # Calcular percentual
         resumo["%_Resolubilidade"] = (resumo["Resolvidos_Mesmo_Dia"] / resumo["Total_Casos"]) * 100
 
+        # Criar rótulo: "Mês - Responsável"
+        resumo["Label"] = resumo["AnoMes_Display"] + " - " + resumo["Primeiro_Nome"]
+
         # Criar gráfico
-        import plotly.express as px
         import plotly.graph_objects as go
 
         fig = go.Figure()
 
-        x_labels = resumo["AnoMes_Display"] + " - " + resumo["Primeiro_Nome"]
+        x_labels = resumo["Label"]
 
         # Barra 1: Total de casos
         fig.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Total_Casos"],
-            name="Total de Casos"
+            name="Total de Casos",
+            text=resumo["Total_Casos"],
+            textposition="auto"
         ))
 
         # Barra 2: Resolvidos no mesmo dia
         fig.add_trace(go.Bar(
             x=x_labels,
             y=resumo["Resolvidos_Mesmo_Dia"],
-            name="Resolvidos no Mesmo Dia"
+            name="Resolvidos no Mesmo Dia",
+            text=resumo["Resolvidos_Mesmo_Dia"],
+            textposition="auto"
         ))
 
-        # Barra 3: % Resolubilidade
-        fig.add_trace(go.Bar(
+        # Linha: % Resolubilidade
+        fig.add_trace(go.Scatter(
             x=x_labels,
             y=resumo["%_Resolubilidade"],
-            name="% Resolubilidade"
+            name="% Resolubilidade",
+            mode="lines+markers+text",
+            text=[f"{v:.1f}%" for v in resumo["%_Resolubilidade"]],
+            textposition="top center",
+            yaxis="y2"
         ))
 
-        # Layout
+        # Layout com eixos secundários
         fig.update_layout(
             title="Índice de resolubilidade por responsável e mês",
             xaxis_title="Mês - Responsável",
-            yaxis_title="Valores",
+            yaxis=dict(
+                title="Quantidade de Casos"
+            ),
+            yaxis2=dict(
+                title="% Resolubilidade",
+                overlaying="y",
+                side="right"
+            ),
             barmode="group",
             legend_title="Legenda"
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
         st.success("✅ Dashboard carregado com sucesso!")
 else:
