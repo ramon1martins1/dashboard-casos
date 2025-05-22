@@ -187,7 +187,7 @@ if uploaded_file:
         st.subheader("🎯 Índice de Resolubilidade")
 
         # Criar coluna: resolvido no mesmo dia?
-        df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Abertura"] == df_filtrado["Data_Resolucao"]
+        df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Abertura"] == df_filtrado["Solução"]
 
         # Extrair mês para agrupamento
         df_filtrado["AnoMes"] = df_filtrado["Abertura"].dt.to_period("M")
