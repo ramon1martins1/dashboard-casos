@@ -66,7 +66,8 @@ def load_data():
         df["Ano"] = df["Abertura"].dt.year
         df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
         df['Responsável'] = df['Responsável'].apply(agrupar_responsavel)
-        
+        df['Data de Abertura'] = pd.to_datetime(df['Abertura'])
+
         return df
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
@@ -80,7 +81,23 @@ with st.spinner("Carregando dados..."):
     df = load_data()
 
 if df is None:
-    st.error("Falha ao carregar os dados.") 
+    st.error("Falha ao carregar os dados.")
+else:
+    # Só agora que o df existe
+    maior_data_abertura = df['Data de Abertura'].max().strftime('%d/%m/%Y')
+
+    with st.container():
+        st.success(
+            f"Indicador atualizado até: {maior_data_abertura}", icon="✅"
+        )
+
+        #atualizar = st.button("Atualizar dados")
+        
+        #if atualizar:
+        #    st.write("Dados atualizados!")     
+
+    # Aqui seguem os filtros e gráficos normalmente
+
 
 if df is not None:
     # Filtros - Adicionando Tipo
@@ -444,6 +461,6 @@ if df is not None:
 
         st.plotly_chart(fig7, use_container_width=True)
 
-        st.success(f"✅ Dashboard atualizado em {pd.Timestamp.now().strftime('%H:%M:%S')}")
+        st.success(f"✅ Indicador carregado com sucesso.")
 else:
     st.error("Não foi possível carregar os dados. Verifique a conexão ou tente novamente mais tarde.")
