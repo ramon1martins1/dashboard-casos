@@ -598,7 +598,7 @@ if df is not None:
             def highlight_max(s):
                 """Destaca o valor máximo em verde claro"""
                 is_max = s == s.max()
-                return ['background-color: lightgreen' if v else '' for v in is_max]
+                return ['background-color: teal' if v else '' for v in is_max]
             
             styled_df = resumo_responsaveis.style.format({
                 "Total Geral": "{:.0f}",
