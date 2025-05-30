@@ -553,7 +553,7 @@ if df is not None:
             bordercolor="#e74c3c",
             borderwidth=1
         )
-        
+                
         # Melhorar aparência dos eixos
         fig5.update_xaxes(
             showgrid=True,
@@ -564,7 +564,7 @@ if df is not None:
             linecolor='rgba(128,128,128,0.3)',
             tickangle=0,
             categoryorder='array',
-            categoryarray=sorted(df_ano["AnoMes_Display"].unique()),
+            categoryarray=casos_resp.sort_values("AnoMes")["AnoMes_Display"].unique(),
             tickfont=dict(color="white")
         )
         
