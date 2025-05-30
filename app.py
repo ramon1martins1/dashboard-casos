@@ -129,7 +129,7 @@ if df is not None:
         meses_ordenados = df_ordenado["AnoMes"].unique()
         meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
 
-        ## 1️⃣ Total de Casos por Mês
+        ## 1️⃣ Total de Casos por Mês (versão corrigida)
         st.subheader("1️⃣ Total de casos por mês")
 
         # 1. Converter ano para string (evita decimais)
@@ -153,54 +153,53 @@ if df is not None:
             '2025': '#1f77b4'   # Azul escuro
         }
 
-        # 6. Criar posições personalizadas para as barras com maior espaçamento entre meses
+        # 6. Criar posições personalizadas considerando apenas anos existentes por mês
         import plotly.graph_objects as go
 
-        # Obter meses e anos únicos
-        meses_unicos = casos_mes.sort_values('MesNum')[['MesNum', 'MesNome']].drop_duplicates().reset_index(drop=True)
-        anos_unicos = sorted(casos_mes['Ano'].unique())
+        # Obter meses únicos ordenados
+        meses_unicos = casos_mes[['MesNum', 'MesNome']].drop_duplicates().sort_values('MesNum')
+        meses_lista = meses_unicos.to_dict('records')
 
-        # Criar posições para as barras com espaçamento personalizado
-        posicoes = []
-        labels = []
-        anos_labels = []
+        # Criar estrutura para armazenar posições
+        barras_x = []
+        barras_y = []
+        barras_cor = []
+        barras_texto = []
+        tickvals = []
+        ticktext = []
         mes_posicoes = {}  # Para armazenar a posição central de cada mês
         contador = 0
 
-        for i, mes_row in meses_unicos.iterrows():
-            mes_num = mes_row['MesNum']
-            mes_nome = mes_row['MesNome']
+        for mes in meses_lista:
+            mes_num = mes['MesNum']
+            mes_nome = mes['MesNome']
+            
+            # Filtrar dados apenas para este mês
+            dados_mes = casos_mes[casos_mes['MesNum'] == mes_num]
+            anos_no_mes = dados_mes['Ano'].unique()
             
             # Posição inicial para este mês
             inicio_mes = contador
             
-            # Adicionar posição para cada ano neste mês
-            for ano in anos_unicos:
-                posicoes.append(contador)
-                labels.append(ano)  # Rótulo do ano
+            # Adicionar barra para cada ano que existe neste mês
+            for ano in sorted(anos_no_mes):
+                total = dados_mes[dados_mes['Ano'] == ano]['Total'].values[0]
+                
+                barras_x.append(contador)
+                barras_y.append(total)
+                barras_cor.append(cores_por_ano.get(ano, '#333333'))
+                barras_texto.append(str(total))
+                
+                tickvals.append(contador)
+                ticktext.append(ano)
+                
                 contador += 1
             
             # Armazenar posição central do mês para a anotação
             mes_posicoes[mes_nome] = (inicio_mes + contador - 1) / 2
             
-            # Adicionar espaço extra entre os meses (aumentar para mais espaço)
-            contador += 2  # Espaço entre grupos de meses (ajuste este valor para mais ou menos espaço)
-
-        # Criar dados para o gráfico
-        barras_x = []
-        barras_y = []
-        barras_cor = []
-        barras_texto = []
-
-        # Preencher os dados para cada barra
-        for i, (mes_num, mes_nome, ano, total) in enumerate(zip(casos_mes['MesNum'], casos_mes['MesNome'], casos_mes['Ano'], casos_mes['Total'])):
-            # Encontrar a posição correta para esta barra
-            idx = meses_unicos[meses_unicos['MesNum'] == mes_num].index[0] * (len(anos_unicos) + 2) + anos_unicos.index(ano)
-            
-            barras_x.append(idx)
-            barras_y.append(total)
-            barras_cor.append(cores_por_ano.get(ano, '#333333'))
-            barras_texto.append(str(total))
+            # Adicionar espaço extra entre os meses
+            contador += 2  # Espaço entre grupos de meses
 
         # Criar o gráfico
         fig1 = go.Figure()
@@ -233,8 +232,8 @@ if df is not None:
         fig1.update_layout(
             xaxis=dict(
                 tickmode='array',
-                tickvals=barras_x,
-                ticktext=labels,
+                tickvals=tickvals,
+                ticktext=ticktext,
                 title=None,
                 showgrid=False
             ),
@@ -279,7 +278,7 @@ if df is not None:
         )
         st.plotly_chart(fig2, use_container_width=True)
 
-        ## 3️⃣ Reaberturas por Mês - Layout agrupado por ano
+        ## 3️⃣ Reaberturas por Mês - Layout agrupado por ano (versão corrigida)
         st.subheader("3️⃣ Reaberturas por mês")
 
         # 1. Converter ano para string (evita decimais)
@@ -297,38 +296,53 @@ if df is not None:
         # 4. Ordenar por mês e ano
         reaberturas_mes = reaberturas_mes.sort_values(['MesNum', 'Ano'])
 
-        # 5. Definir cores por ano (usando o mesmo esquema do primeiro gráfico)
+        # 5. Definir cores por ano
         cores_por_ano = {
             '2023': '#ff7f0e',  # Laranja
             '2024': '#aec7e8',  # Azul claro
             '2025': '#1f77b4'   # Azul escuro
         }
 
-        # 6. Criar posições personalizadas para as barras
+        # 6. Criar posições personalizadas considerando apenas anos existentes por mês
         import plotly.graph_objects as go
 
-        # Obter meses e anos únicos
-        meses_unicos = reaberturas_mes.sort_values('MesNum')[['MesNum', 'MesNome']].drop_duplicates().reset_index(drop=True)
-        anos_unicos = sorted(reaberturas_mes['Ano'].unique())
+        # Obter meses únicos ordenados
+        meses_unicos = reaberturas_mes[['MesNum', 'MesNome']].drop_duplicates().sort_values('MesNum')
+        meses_lista = meses_unicos.to_dict('records')
 
-        # Criar posições para as barras com espaçamento personalizado
-        posicoes = []
-        labels = []
-        anos_labels = []
+        # Criar estrutura para armazenar posições
+        barras_x = []
+        barras_y = []
+        barras_cor = []
+        barras_texto = []
+        tickvals = []
+        ticktext = []
         mes_posicoes = {}  # Para armazenar a posição central de cada mês
         contador = 0
 
-        for i, mes_row in meses_unicos.iterrows():
-            mes_num = mes_row['MesNum']
-            mes_nome = mes_row['MesNome']
+        for mes in meses_lista:
+            mes_num = mes['MesNum']
+            mes_nome = mes['MesNome']
+            
+            # Filtrar dados apenas para este mês
+            dados_mes = reaberturas_mes[reaberturas_mes['MesNum'] == mes_num]
+            anos_no_mes = dados_mes['Ano'].unique()
             
             # Posição inicial para este mês
             inicio_mes = contador
             
-            # Adicionar posição para cada ano neste mês
-            for ano in anos_unicos:
-                posicoes.append(contador)
-                labels.append(ano)  # Rótulo do ano
+            # Adicionar barra para cada ano que existe neste mês
+            for ano in sorted(anos_no_mes):
+                total = dados_mes[dados_mes['Ano'] == ano]['Total'].values[0]
+                
+                barras_x.append(contador)
+                barras_y.append(total)
+                barras_cor.append(cores_por_ano.get(ano, '#333333'))
+                barras_texto.append(str(total))
+                
+                tickvals.append(contador)
+                ticktext.append(ano)
+                
                 contador += 1
             
             # Armazenar posição central do mês para a anotação
@@ -336,22 +350,6 @@ if df is not None:
             
             # Adicionar espaço extra entre os meses
             contador += 2  # Espaço entre grupos de meses
-
-        # Criar dados para o gráfico
-        barras_x = []
-        barras_y = []
-        barras_cor = []
-        barras_texto = []
-
-        # Preencher os dados para cada barra
-        for i, (mes_num, mes_nome, ano, total) in enumerate(zip(reaberturas_mes['MesNum'], reaberturas_mes['MesNome'], reaberturas_mes['Ano'], reaberturas_mes['Total'])):
-            # Encontrar a posição correta para esta barra
-            idx = meses_unicos[meses_unicos['MesNum'] == mes_num].index[0] * (len(anos_unicos) + 2) + anos_unicos.index(ano)
-            
-            barras_x.append(idx)
-            barras_y.append(total)
-            barras_cor.append(cores_por_ano.get(ano, '#333333'))
-            barras_texto.append(str(total))
 
         # Criar o gráfico
         fig3 = go.Figure()
@@ -384,8 +382,8 @@ if df is not None:
         fig3.update_layout(
             xaxis=dict(
                 tickmode='array',
-                tickvals=barras_x,
-                ticktext=labels,
+                tickvals=tickvals,
+                ticktext=ticktext,
                 title=None,
                 showgrid=False
             ),
@@ -441,7 +439,7 @@ if df is not None:
             y="Total",
             color="Primeiro_Nome",
             text="Total",
-            title="Casos por responsável",
+            title=" ",
             facet_col="AnoMes_Display",
             category_orders={"Primeiro_Nome": casos_resp["Primeiro_Nome"].tolist()}
         )
