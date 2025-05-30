@@ -625,16 +625,41 @@ if df is not None:
                 color_continuous_scale="Blues"
             )
             
-            fig_ranking.update_traces(textposition='outside')
+            fig_ranking.update_traces(
+                textposition='outside',  # Mantido fora das barras
+                textfont=dict(color='white', size=12, family='Arial Bold')
+            )
+            
+            max_value = ranking_data.head(10)["Total Geral"].max()
+            
             fig_ranking.update_layout(
                 xaxis_title="Responsável",
                 yaxis_title="Total de Casos",
                 showlegend=False,
-                height=400,
+                height=500,
                 plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                paper_bgcolor='rgba(0,0,0,0)',
+                margin=dict(t=80, b=60, l=60, r=60),
+                yaxis=dict(
+                    range=[0, max_value * 1.15]  # 15% de espaço extra para textos externos
+                ),
+                font=dict(color='white'),
+                title=dict(
+                    font=dict(color='white', size=16),
+                    x=0.5,
+                    xanchor='center'
+                )
             )
             
+            fig_ranking.update_xaxes(
+                tickangle=45,
+                tickfont=dict(color='white')
+            )
+            
+            fig_ranking.update_yaxes(
+                tickfont=dict(color='white')
+            )
+                   
             st.plotly_chart(fig_ranking, use_container_width=True)
 
         ## 6️⃣ Casos por Tipo (Mensal) - NOVO GRÁFICO
