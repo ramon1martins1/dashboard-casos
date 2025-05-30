@@ -66,7 +66,8 @@ def load_data():
         df["Ano"] = df["Abertura"].dt.year
         df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
         df['Responsável'] = df['Responsável'].apply(agrupar_responsavel)
-        
+        df['Data de Abertura'] = pd.to_datetime(df['Abertura'])
+
         return df
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
@@ -80,7 +81,23 @@ with st.spinner("Carregando dados..."):
     df = load_data()
 
 if df is None:
-    st.error("Falha ao carregar os dados.") 
+    st.error("Falha ao carregar os dados.")
+else:
+    # Só agora que o df existe
+    maior_data_abertura = df['Data de Abertura'].max().strftime('%d/%m/%Y')
+
+    with st.container():
+        st.success(
+            f"Indicador atualizado até: {maior_data_abertura}", icon="✅"
+        )
+
+        #atualizar = st.button("Atualizar dados")
+        
+        #if atualizar:
+        #    st.write("Dados atualizados!")     
+
+    # Aqui seguem os filtros e gráficos normalmente
+
 
 if df is not None:
     # Filtros - Adicionando Tipo
@@ -112,7 +129,7 @@ if df is not None:
         meses_ordenados = df_ordenado["AnoMes"].unique()
         meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
 
-        ## 1️⃣ Total de Casos por Mês
+        ## 1️⃣ Total de Casos por Mês (versão corrigida)
         st.subheader("1️⃣ Total de casos por mês")
 
         # 1. Converter ano para string (evita decimais)
@@ -129,79 +146,114 @@ if df is not None:
         # 4. Ordenar por mês e ano
         casos_mes = casos_mes.sort_values(['MesNum', 'Ano'])
 
-        # 5. Criar uma coluna de posição X personalizada para espaçamento
-        posicao_x = []
-        contador = 0
-        mes_anterior = None
-
-        for i, row in casos_mes.iterrows():
-            mes_atual = row['MesNum']
-            
-            # Se mudou de mês, adiciona espaço extra
-            if mes_anterior is not None and mes_atual != mes_anterior:
-                contador += 1  # Espaço extra entre meses
-            
-            posicao_x.append(contador)
-            contador += 1
-            mes_anterior = mes_atual
-
-        casos_mes['posicao_x'] = posicao_x
-
-        # 6. Criar rótulos para o eixo X
-        casos_mes['MesAno_Label'] = casos_mes['MesNome'] + '/' + casos_mes['Ano']
-
-        # 7. Definir cores por ano
+        # 5. Definir cores por ano
         cores_por_ano = {
             '2023': '#ff7f0e',  # Laranja
             '2024': '#aec7e8',  # Azul claro
             '2025': '#1f77b4'   # Azul escuro
         }
 
-        # 8. Criar gráfico com posições personalizadas
-        fig1 = px.bar(
-            casos_mes,
-            x='posicao_x',
-            y='Total',
-            color='Ano',
-            color_discrete_map=cores_por_ano,
-            text='Total',
+        # 6. Criar posições personalizadas considerando apenas anos existentes por mês
+        import plotly.graph_objects as go
+
+        # Obter meses únicos ordenados
+        meses_unicos = casos_mes[['MesNum', 'MesNome']].drop_duplicates().sort_values('MesNum')
+        meses_lista = meses_unicos.to_dict('records')
+
+        # Criar estrutura para armazenar posições
+        barras_x = []
+        barras_y = []
+        barras_cor = []
+        barras_texto = []
+        tickvals = []
+        ticktext = []
+        mes_posicoes = {}  # Para armazenar a posição central de cada mês
+        contador = 0
+
+        for mes in meses_lista:
+            mes_num = mes['MesNum']
+            mes_nome = mes['MesNome']
+            
+            # Filtrar dados apenas para este mês
+            dados_mes = casos_mes[casos_mes['MesNum'] == mes_num]
+            anos_no_mes = dados_mes['Ano'].unique()
+            
+            # Posição inicial para este mês
+            inicio_mes = contador
+            
+            # Adicionar barra para cada ano que existe neste mês
+            for ano in sorted(anos_no_mes):
+                total = dados_mes[dados_mes['Ano'] == ano]['Total'].values[0]
+                
+                barras_x.append(contador)
+                barras_y.append(total)
+                barras_cor.append(cores_por_ano.get(ano, '#333333'))
+                barras_texto.append(str(total))
+                
+                tickvals.append(contador)
+                ticktext.append(ano)
+                
+                contador += 1
+            
+            # Armazenar posição central do mês para a anotação
+            mes_posicoes[mes_nome] = (inicio_mes + contador - 1) / 2
+            
+            # Adicionar espaço extra entre os meses
+            contador += 2  # Espaço entre grupos de meses
+
+        # Criar o gráfico
+        fig1 = go.Figure()
+
+        # Adicionar as barras
+        fig1.add_trace(go.Bar(
+            x=barras_x,
+            y=barras_y,
+            marker_color=barras_cor,
+            text=barras_texto,
+            textposition='outside',
+            width=0.7  # Largura das barras
+        ))
+
+        # Adicionar anotações para os meses (centralizadas)
+        anotacoes = []
+        for mes_nome, pos_central in mes_posicoes.items():
+            anotacoes.append(dict(
+                x=pos_central,
+                y=1.05,  # Posição acima do gráfico
+                xref='x',
+                yref='paper',
+                text=mes_nome,
+                showarrow=False,
+                font=dict(size=14, color='white'),
+                xanchor='center'
+            ))
+
+        # Configurar os rótulos do eixo X (anos)
+        fig1.update_layout(
+            xaxis=dict(
+                tickmode='array',
+                tickvals=tickvals,
+                ticktext=ticktext,
+                title=None,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='Total de Casos',
+                gridcolor='rgba(255,255,255,0.1)'
+            ),
+            annotations=anotacoes,
+            plot_bgcolor='rgba(0,0,0,0)',  # Fundo transparente
+            paper_bgcolor='rgba(0,0,0,0)',  # Fundo transparente
+            font=dict(color='white'),
+            margin=dict(t=80, b=50, l=50, r=50),
+            height=500,
+            bargap=0,
+            bargroupgap=0,
             title='Total de casos por mês'
         )
 
-        # 9. Configurar o eixo X com os rótulos corretos
-        fig1.update_xaxes(
-            tickmode='array',
-            tickvals=casos_mes['posicao_x'],
-            ticktext=casos_mes['MesAno_Label'],
-            tickangle=0,
-            title_text='Mês/Ano'
-        )
-
-        # 10. Configurações visuais
-        fig1.update_traces(
-            textposition='outside',
-            marker_line_width=0.5,
-            width=0.6  # Largura das barras
-        )
-
-        fig1.update_layout(
-            showlegend=False,  # Remove a legenda
-            bargap=0.3,  # Espaço entre barras do mesmo grupo
-            yaxis_title='Total de Casos',
-            xaxis=dict(
-                showgrid=False,  # Remove grid vertical
-                zeroline=False
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridwidth=0.5,
-                gridcolor='rgba(0,0,0,0.1)'
-            )
-        )
-
+        # Exibir o gráfico
         st.plotly_chart(fig1, use_container_width=True)
-
-
 
         ## 2️⃣ Casos por Origem (Mensal) - Barras lado a lado
         st.subheader("2️⃣ Casos por origem (Mensal)")
@@ -226,25 +278,131 @@ if df is not None:
         )
         st.plotly_chart(fig2, use_container_width=True)
 
-        ## 3️⃣ Reaberturas por Mês - Agora com barras
+        ## 3️⃣ Reaberturas por Mês - Layout agrupado por ano (versão corrigida)
         st.subheader("3️⃣ Reaberturas por mês")
-        reaberturas = df_filtrado.groupby(["AnoMes", "AnoMes_Display"])["Qt Reab."].sum().reset_index()
-        reaberturas = reaberturas.sort_values("AnoMes")
 
-        fig3 = px.bar(
-            reaberturas, 
-            x="AnoMes_Display", 
-            y="Qt Reab.", 
-            text="Qt Reab.", 
-            title="Reaberturas por mês"
+        # 1. Converter ano para string (evita decimais)
+        df_filtrado = df_filtrado.copy()
+        df_filtrado['Ano'] = df_filtrado['Ano'].astype(int).astype(str)
+
+        # 2. Extrair mês e número do mês para ordenação
+        df_filtrado['MesNum'] = df_filtrado['Abertura'].dt.month
+        df_filtrado['MesNome'] = df_filtrado['Abertura'].dt.strftime('%b')
+
+        # 3. Agrupar para obter a soma de reaberturas
+        reaberturas_mes = df_filtrado.groupby(['MesNum', 'MesNome', 'Ano'])['Qt Reab.'].sum().reset_index(name='Total')
+        reaberturas_mes['Total'] = reaberturas_mes['Total'].astype(int)
+
+        # 4. Ordenar por mês e ano
+        reaberturas_mes = reaberturas_mes.sort_values(['MesNum', 'Ano'])
+
+        # 5. Definir cores por ano
+        cores_por_ano = {
+            '2023': '#ff7f0e',  # Laranja
+            '2024': '#aec7e8',  # Azul claro
+            '2025': '#1f77b4'   # Azul escuro
+        }
+
+        # 6. Criar posições personalizadas considerando apenas anos existentes por mês
+        import plotly.graph_objects as go
+
+        # Obter meses únicos ordenados
+        meses_unicos = reaberturas_mes[['MesNum', 'MesNome']].drop_duplicates().sort_values('MesNum')
+        meses_lista = meses_unicos.to_dict('records')
+
+        # Criar estrutura para armazenar posições
+        barras_x = []
+        barras_y = []
+        barras_cor = []
+        barras_texto = []
+        tickvals = []
+        ticktext = []
+        mes_posicoes = {}  # Para armazenar a posição central de cada mês
+        contador = 0
+
+        for mes in meses_lista:
+            mes_num = mes['MesNum']
+            mes_nome = mes['MesNome']
+            
+            # Filtrar dados apenas para este mês
+            dados_mes = reaberturas_mes[reaberturas_mes['MesNum'] == mes_num]
+            anos_no_mes = dados_mes['Ano'].unique()
+            
+            # Posição inicial para este mês
+            inicio_mes = contador
+            
+            # Adicionar barra para cada ano que existe neste mês
+            for ano in sorted(anos_no_mes):
+                total = dados_mes[dados_mes['Ano'] == ano]['Total'].values[0]
+                
+                barras_x.append(contador)
+                barras_y.append(total)
+                barras_cor.append(cores_por_ano.get(ano, '#333333'))
+                barras_texto.append(str(total))
+                
+                tickvals.append(contador)
+                ticktext.append(ano)
+                
+                contador += 1
+            
+            # Armazenar posição central do mês para a anotação
+            mes_posicoes[mes_nome] = (inicio_mes + contador - 1) / 2
+            
+            # Adicionar espaço extra entre os meses
+            contador += 2  # Espaço entre grupos de meses
+
+        # Criar o gráfico
+        fig3 = go.Figure()
+
+        # Adicionar as barras
+        fig3.add_trace(go.Bar(
+            x=barras_x,
+            y=barras_y,
+            marker_color=barras_cor,
+            text=barras_texto,
+            textposition='outside',
+            width=0.7  # Largura das barras
+        ))
+
+        # Adicionar anotações para os meses (centralizadas)
+        anotacoes = []
+        for mes_nome, pos_central in mes_posicoes.items():
+            anotacoes.append(dict(
+                x=pos_central,
+                y=1.05,  # Posição acima do gráfico
+                xref='x',
+                yref='paper',
+                text=mes_nome,
+                showarrow=False,
+                font=dict(size=14, color='white'),
+                xanchor='center'
+            ))
+
+        # Configurar os rótulos do eixo X (anos)
+        fig3.update_layout(
+            xaxis=dict(
+                tickmode='array',
+                tickvals=tickvals,
+                ticktext=ticktext,
+                title=None,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='Total de Reaberturas',
+                gridcolor='rgba(255,255,255,0.1)'
+            ),
+            annotations=anotacoes,
+            plot_bgcolor='rgba(0,0,0,0)',  # Fundo transparente
+            paper_bgcolor='rgba(0,0,0,0)',  # Fundo transparente
+            font=dict(color='white'),
+            margin=dict(t=80, b=50, l=50, r=50),
+            height=500,
+            bargap=0,
+            bargroupgap=0,
+            title='Reaberturas por mês'
         )
-        fig3.update_traces(textposition='outside')
-        fig3.update_xaxes(
-            type='category', 
-            categoryorder='array', 
-            categoryarray=meses_display_ordenados,
-            title_text="Mês/Ano"
-        )
+
+        # Exibir o gráfico
         st.plotly_chart(fig3, use_container_width=True)
 
         ## 4️⃣ Top 10 Contas com Mais Casos - Nomes resumidos
@@ -281,7 +439,7 @@ if df is not None:
             y="Total",
             color="Primeiro_Nome",
             text="Total",
-            title="Casos por responsável",
+            title=" ",
             facet_col="AnoMes_Display",
             category_orders={"Primeiro_Nome": casos_resp["Primeiro_Nome"].tolist()}
         )
@@ -408,6 +566,6 @@ if df is not None:
 
         st.plotly_chart(fig7, use_container_width=True)
 
-        st.success(f"✅ Dashboard atualizado em {pd.Timestamp.now().strftime('%H:%M:%S')}")
+        st.success(f"✅ Indicador carregado com sucesso.")
 else:
     st.error("Não foi possível carregar os dados. Verifique a conexão ou tente novamente mais tarde.")
