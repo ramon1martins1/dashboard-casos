@@ -92,7 +92,7 @@ def filter_data(df, anos, origens, responsaveis, tipos):
         df["Origem"].isin(origens) &
         df["Responsável"].isin(responsaveis) &
         df["Tipo"].isin(tipos)
-    ]
+    ].copy() 
 
 # ✅ FUNÇÃO CORRIGIDA para criar mini gráfico de barras horizontais
 def create_mini_horizontal_bar(data, title, color="#d62728", height=100):
@@ -308,9 +308,9 @@ st.subheader("📊 Resumo Executivo")
 total_casos = len(df_filtrado)
 
 # ✅ CORRIGIDO: Forçar anos como inteiros na agregação
-df_filtrado_anos = df_filtrado.copy()
-df_filtrado_anos['Ano_Int'] = df_filtrado_anos['Ano'].astype(int)
-casos_por_ano = df_filtrado_anos.groupby('Ano_Int').size().sort_index()
+df_work = df_filtrado.copy()
+df_work.loc[:, 'Ano_Int'] = df_work['Ano'].astype(int)
+casos_por_ano = df_work.groupby('Ano_Int').size().sort_index()
 
 # Mês atual dos dados (último mês disponível)
 ultimo_mes_dados = df_filtrado['Abertura'].max()
@@ -322,7 +322,7 @@ casos_mes_atual = len(df_filtrado[
 
 # ✅ CORRIGIDO: Reaberturas garantindo anos como inteiros
 total_reaberturas = df_filtrado['Qt Reab.'].sum()
-reaberturas_por_ano = df_filtrado_anos.groupby('Ano_Int')['Qt Reab.'].sum().sort_index()
+reaberturas_por_ano = df_work.groupby('Ano_Int')['Qt Reab.'].sum().sort_index()
 
 # ✅ NOVO: Métricas detalhadas de responsáveis
 metricas_resp = calcular_metricas_responsaveis(df_filtrado)
@@ -427,10 +427,11 @@ with tab1:
     st.subheader("Total de casos por mês")
 
     # Código original mantido
-    df_filtrado_copy = df_filtrado.copy()
-    df_filtrado_copy['Ano'] = df_filtrado_copy['Ano'].astype(int).astype(str)
-    df_filtrado_copy['MesNum'] = df_filtrado_copy['Abertura'].dt.month
-    df_filtrado_copy['MesNome'] = df_filtrado_copy['Abertura'].dt.strftime('%b')
+    df_filtrado_copy = df_filtrado.copy().assign(
+        Ano=lambda x: x['Ano'].astype(str),
+        MesNum=lambda x: x['Abertura'].dt.month,
+        MesNome=lambda x: x['Abertura'].dt.strftime('%b')
+    )
 
     casos_mes = df_filtrado_copy.groupby(['MesNum', 'MesNome', 'Ano']).size().reset_index(name='Total')
     casos_mes = casos_mes.sort_values(['MesNum', 'Ano'])
@@ -521,8 +522,7 @@ with tab1:
         margin=dict(t=80, b=50, l=50, r=50),
         height=500,
         bargap=0,
-        bargroupgap=0,
-        title=' '
+        bargroupgap=0
     )
 
     st.plotly_chart(fig1, use_container_width=True)
@@ -542,8 +542,7 @@ with tab2:
         x="AnoMes_Display", 
         y="Total", 
         color="Origem", 
-        text="Total", 
-        title=" ",
+        text="Total",
         barmode='group'
     )
     fig2.update_traces(textposition='outside')
@@ -559,10 +558,11 @@ with tab3:
     ## 3️⃣ GRÁFICO ORIGINAL - Reaberturas por Mês
     st.subheader("Reaberturas por mês")
 
-    df_filtrado_copy = df_filtrado.copy()
-    df_filtrado_copy['Ano'] = df_filtrado_copy['Ano'].astype(int).astype(str)
-    df_filtrado_copy['MesNum'] = df_filtrado_copy['Abertura'].dt.month
-    df_filtrado_copy['MesNome'] = df_filtrado_copy['Abertura'].dt.strftime('%b')
+    df_filtrado_copy = df_filtrado.copy().assign(
+        Ano=lambda x: x['Ano'].astype(str),
+        MesNum=lambda x: x['Abertura'].dt.month,
+        MesNome=lambda x: x['Abertura'].dt.strftime('%b')
+    )
 
     reaberturas_mes = df_filtrado_copy.groupby(['MesNum', 'MesNome', 'Ano'])['Qt Reab.'].sum().reset_index(name='Total')
     reaberturas_mes['Total'] = reaberturas_mes['Total'].astype(int)
@@ -654,8 +654,7 @@ with tab3:
         margin=dict(t=80, b=50, l=50, r=50),
         height=500,
         bargap=0,
-        bargroupgap=0,
-        title=' '
+        bargroupgap=0
     )
 
     st.plotly_chart(fig3, use_container_width=True)
@@ -671,8 +670,7 @@ with tab4:
         top_contas, 
         x="Conta", 
         y="Total", 
-        text="Total", 
-        title=" "
+        text="Total"
     )
     fig4.update_traces(textposition='outside')
     fig4.update_layout(xaxis={'categoryorder':'total descending'})
@@ -685,8 +683,11 @@ with tab5:
     anos_disponiveis = sorted(df_filtrado["Ano"].unique())
     ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis, index=len(anos_disponiveis)-1)
     
-    df_ano = df_filtrado[df_filtrado["Ano"] == ano_selecionado]
-    df_ano["Primeiro_Nome"] = df_ano["Responsável"].str.split().str[0].fillna("Não informado")
+    df_ano = (df_filtrado[df_filtrado["Ano"] == ano_selecionado]
+          .copy()
+          .assign(
+              Primeiro_Nome=lambda x: x["Responsável"].str.split().str[0].fillna("Não informado")
+          ))
     
     casos_resp = (df_ano.groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome"])
                 .size()
@@ -935,16 +936,27 @@ with tab7:
     ## 7️⃣ GRÁFICO ORIGINAL - Índice de Resolubilidade
     st.subheader("Índice de Resolubilidade")
 
-    df_filtrado_copy = df_filtrado.copy()
-    df_filtrado_copy["Resolvido_Mesmo_Dia"] = df_filtrado_copy["Abertura"] == df_filtrado_copy["Solução"]
-    df_filtrado_copy["Ano"] = df_filtrado_copy["Abertura"].dt.year
-    df_filtrado_copy["Mes"] = df_filtrado_copy["Abertura"].dt.month
-    df_filtrado_copy["Mes_Display"] = df_filtrado_copy["Mes"].apply(lambda x: calendar.month_abbr[x]) + "/" + df_filtrado_copy["Ano"].astype(str)
-    df_filtrado_copy["Mes_Ano_Ordenacao"] = df_filtrado_copy["Ano"] * 100 + df_filtrado_copy["Mes"]
-    df_filtrado_copy["Primeiro_Nome"] = df_filtrado_copy["Responsável"].str.split().str[0].fillna("Não informado")
+    # Criar uma cópia independente com todas as transformações necessárias
+    df_resolubilidade = (
+        df_filtrado
+        .copy()
+        .assign(
+            Resolvido_Mesmo_Dia=lambda x: x["Abertura"] == x["Solução"],
+            Ano=lambda x: x["Abertura"].dt.year,
+            Mes=lambda x: x["Abertura"].dt.month,
+            Mes_Display=lambda x: (
+                x["Mes"].apply(lambda y: calendar.month_abbr[y]) + 
+                "/" + 
+                x["Ano"].astype(str)
+            ),
+            Mes_Ano_Ordenacao=lambda x: x["Ano"] * 100 + x["Mes"],
+            Primeiro_Nome=lambda x: x["Responsável"].str.split().str[0].fillna("Não informado")
+        )
+    )
 
+    # Ordenar os meses de forma segura (sem modificar o DataFrame original)
     meses_ordenados = (
-        df_filtrado_copy[["Mes_Display", "Mes_Ano_Ordenacao"]]
+        df_resolubilidade[["Mes_Display", "Mes_Ano_Ordenacao"]]
         .drop_duplicates()
         .sort_values("Mes_Ano_Ordenacao")
     )
@@ -952,23 +964,39 @@ with tab7:
     meses_disponiveis = meses_ordenados["Mes_Display"].tolist()
     mes_escolhido = st.selectbox("Selecione o mês:", meses_disponiveis, index=len(meses_disponiveis)-1)
 
-    df_mes = df_filtrado_copy[df_filtrado_copy["Mes_Display"] == mes_escolhido]
+    # Filtrar para o mês escolhido
+    df_mes = df_resolubilidade.loc[df_resolubilidade["Mes_Display"] == mes_escolhido].copy()
 
-    total_casos = (df_mes
-                .groupby("Primeiro_Nome")
-                .size()
-                .reset_index(name="Total_Casos"))
+    # Agregações seguras usando groupby
+    total_casos = (
+        df_mes
+        .groupby("Primeiro_Nome", observed=True)
+        .size()
+        .reset_index(name="Total_Casos")
+    )
 
-    resolvidos_mesmo_dia = (df_mes[df_mes["Resolvido_Mesmo_Dia"]]
-                            .groupby("Primeiro_Nome")
-                            .size()
-                            .reset_index(name="Resolvidos_Mesmo_Dia"))
+    resolvidos_mesmo_dia = (
+        df_mes.loc[df_mes["Resolvido_Mesmo_Dia"]]
+        .groupby("Primeiro_Nome", observed=True)
+        .size()
+        .reset_index(name="Resolvidos_Mesmo_Dia")
+    )
 
-    resumo = pd.merge(total_casos, resolvidos_mesmo_dia,
-                    on="Primeiro_Nome", how="left").fillna(0)
+    # Merge seguro
+    resumo = (
+        total_casos
+        .merge(
+            resolvidos_mesmo_dia,
+            on="Primeiro_Nome",
+            how="left"
+        )
+        .fillna(0)
+        .assign(
+            Perc_Resolubilidade=lambda x: (x["Resolvidos_Mesmo_Dia"] / x["Total_Casos"]) * 100
+        )
+    )
 
-    resumo["%_Resolubilidade"] = (resumo["Resolvidos_Mesmo_Dia"] / resumo["Total_Casos"]) * 100
-
+    # Criar o gráfico
     fig7 = go.Figure()
 
     x_labels = resumo["Primeiro_Nome"]
@@ -991,10 +1019,10 @@ with tab7:
 
     fig7.add_trace(go.Scatter(
         x=x_labels,
-        y=resumo["%_Resolubilidade"],
+        y=resumo["Perc_Resolubilidade"],
         name="% Resolubilidade",
         mode="lines+markers+text",
-        text=[f"{v:.1f}%" for v in resumo["%_Resolubilidade"]],
+        text=[f"{v:.1f}%" for v in resumo["Perc_Resolubilidade"]],
         textposition="top center",
         yaxis="y2"
     ))
@@ -1006,7 +1034,10 @@ with tab7:
         yaxis2=dict(title="% Resolubilidade", overlaying="y", side="right"),
         barmode="group",
         legend=dict(title="Legenda", x=1.05, y=1),
-        margin=dict(r=100)
+        margin=dict(r=100),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white')
     )
 
     st.plotly_chart(fig7, use_container_width=True)
