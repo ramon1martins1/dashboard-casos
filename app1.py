@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import gdown
 from io import BytesIO
 import requests
+import calendar
 
 st.set_page_config(page_title="Indicadores de dados", layout="wide")
 
@@ -90,14 +92,6 @@ else:
         st.success(
             f"Indicador atualizado até: {maior_data_abertura}", icon="✅"
         )
-
-        #atualizar = st.button("Atualizar dados")
-        
-        #if atualizar:
-        #    st.write("Dados atualizados!")     
-
-    # Aqui seguem os filtros e gráficos normalmente
-
 
 if df is not None:
     # Filtros - Adicionando Tipo
@@ -421,45 +415,252 @@ if df is not None:
         fig4.update_layout(xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig4, use_container_width=True)
 
-        ## 5️⃣ Casos por Responsável (Mensal)
-        st.subheader("5️⃣ Casos por responsável (Mensal)")
+        ## 5️⃣ CASOS POR RESPONSÁVEL (MENSAL) - VERSÃO MELHORADA
+        st.subheader("5️⃣ Casos por Responsável (Mensal)")
         
-        df_filtrado = df_filtrado.copy()
-        df_filtrado["Primeiro_Nome"] = df_filtrado["Responsável"].str.split().str[0].fillna("Não informado")
-
-        casos_resp = (df_filtrado.groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome"])
+        # Filtro para selecionar apenas 1 ano por vez
+        anos_disponiveis = sorted(df_filtrado["Ano"].unique())
+        ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis, index=len(anos_disponiveis)-1)
+        
+        # Filtrar dados pelo ano selecionado
+        df_ano = df_filtrado[df_filtrado["Ano"] == ano_selecionado]
+        
+        # Preparação dos dados
+        df_ano["Primeiro_Nome"] = df_ano["Responsável"].str.split().str[0].fillna("Não informado")
+        
+        casos_resp = (df_ano.groupby(["AnoMes", "AnoMes_Display", "Primeiro_Nome"])
                     .size()
                     .reset_index(name="Total"))
-
+        
         casos_resp = casos_resp.sort_values(["AnoMes", "Total"], ascending=[True, False])
-
-        fig5 = px.bar(
-            casos_resp,
-            x="Primeiro_Nome",
-            y="Total",
-            color="Primeiro_Nome",
-            text="Total",
-            title=" ",
-            facet_col="AnoMes_Display",
-            category_orders={"Primeiro_Nome": casos_resp["Primeiro_Nome"].tolist()}
-        )
-
-        fig5.update_traces(
-            textposition='outside',
-            textangle=0,
-            marker_line_width=0.5
-        )
-
+        
+        # MÉTRICAS RESUMO - Centralizadas
+        col1, col2, col3, col4 = st.columns(4)
+        
+        total_casos = casos_resp["Total"].sum()
+        media_mensal = casos_resp.groupby("AnoMes_Display")["Total"].sum().mean()
+        responsavel_top = casos_resp.groupby("Primeiro_Nome")["Total"].sum().idxmax()
+        casos_top = casos_resp.groupby("Primeiro_Nome")["Total"].sum().max()
+        
+        with col1:
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h4 style="margin-bottom: 0; padding-bottom: 2px;">📊 Total de casos no ano</h4>
+                    <h2 style="margin-top: 0px; padding-top: 0; color: #1f77b4;">{total_casos:,}</h2>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        
+        with col2:
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h4 style="margin-bottom: 0; padding-bottom: 2px;">📈 Média Mensal</h4>
+                    <h2 style="margin-top: 0px; padding-top: 0; color: #ff7f0e;">{media_mensal:.1f}</h2>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        
+        with col3:
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h4 style="margin-bottom: 0; padding-bottom: 2px;">🏆 Top Responsável</h4>
+                    <h2 style="margin-top: 0px;padding-top: 0; color: #2ca02c;">{responsavel_top}</h2>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        
+        with col4:
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h4 style="margin-bottom: 0; padding-bottom: 2px;">🎯 Total casos do top no ano</h4>
+                    <h2 style="margin-top: 0px; padding-top: 0; color: #d62728;">{casos_top:,}</h2>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+        
+        # GRÁFICO PRINCIPAL MELHORADO
+        # Criar pivot para melhor visualização
+        pivot_data = casos_resp.pivot(index="AnoMes_Display", columns="Primeiro_Nome", values="Total").fillna(0)
+        
+        # Cores mais profissionais e distintas
+        colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e', '#f1c40f', '#95a5a6']
+        
+        fig5 = go.Figure()
+        
+        for i, responsavel in enumerate(pivot_data.columns):
+            fig5.add_trace(go.Bar(
+                name=responsavel,
+                x=pivot_data.index,
+                y=pivot_data[responsavel],
+                text=pivot_data[responsavel].astype(int),
+                textposition='outside',
+                marker_color=colors[i % len(colors)],
+                marker_line_color='white',
+                marker_line_width=1,
+                hovertemplate=f'<b>{responsavel}</b><br>Mês: %{{x}}<br>Casos: %{{y}}<extra></extra>'
+            ))
+        
+        # Encontrar o valor máximo para anotação
+        max_value = pivot_data.values.max()
+        max_pos = pivot_data.stack().idxmax()
+        
         fig5.update_layout(
-            xaxis_title=None,
-            yaxis_title="Total de casos",
-            showlegend=False
+            title={
+                'text': 'Distribuição de Casos por Responsável ao Longo dos Meses',
+                'x': 0.5,
+                'xanchor': 'center',
+                'font': {'size': 18, 'color': 'white', 'family': 'Arial Black'}
+            },
+            xaxis_title="Período",
+            yaxis_title="Número de Casos",
+            barmode='group',
+            height=600,
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.25,
+                xanchor="center",
+                x=0.5,
+                # CORRIGIDO: Legenda com fundo transparente
+                bgcolor="rgba(0,0,0,0)",  # Fundo transparente
+                bordercolor="rgba(255,255,255,0.3)",  # Borda sutil branca
+                borderwidth=1,
+                font=dict(color="white")  # Texto da legenda em branco
+            ),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Arial, sans-serif", size=12, color="white"),
+            margin=dict(t=100, b=150, l=60, r=60)
         )
-
-        fig5.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-        fig5.update_xaxes(title_text=None)
-
+        
+        # Adicionar anotação para destacar o pico
+        fig5.add_annotation(
+            text=f"🔥 Pico: {int(max_value)} casos",
+            xref="paper", yref="paper",
+            x=0.02, y=0.98,
+            showarrow=False,
+            font=dict(size=12, color="#e74c3c", family="Arial Bold"),
+            bgcolor="rgba(231, 76, 60, 0.1)",
+            bordercolor="#e74c3c",
+            borderwidth=1
+        )
+                
+        # Melhorar aparência dos eixos
+        fig5.update_xaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.1)',
+            showline=True,
+            linewidth=2,
+            linecolor='rgba(128,128,128,0.3)',
+            tickangle=0,
+            categoryorder='array',
+            categoryarray=casos_resp.sort_values("AnoMes")["AnoMes_Display"].unique(),
+            tickfont=dict(color="white")
+        )
+        
+        fig5.update_yaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(128,128,128,0.1)',
+            showline=True,
+            linewidth=2,
+            linecolor='rgba(128,128,128,0.3)',
+            tickfont=dict(color="white")
+        )
+        
         st.plotly_chart(fig5, use_container_width=True)
+        
+        # Análise Detalhada por Responsável em seção retrátil
+        with st.expander("📋 Análise Detalhada por Responsável", expanded=False):
+            # Criar tabela resumo
+            resumo_responsaveis = casos_resp.groupby("Primeiro_Nome").agg({
+                "Total": ["sum", "mean", "max", "min"]
+            }).round(1)
+            
+            resumo_responsaveis.columns = ["Total Geral", "Média Mensal", "Máximo", "Mínimo"]
+            resumo_responsaveis = resumo_responsaveis.sort_values("Total Geral", ascending=False)
+            
+            # Adicionar colunas de análise
+            resumo_responsaveis["Variação"] = resumo_responsaveis["Máximo"] - resumo_responsaveis["Mínimo"]
+            resumo_responsaveis["% do Total"] = (resumo_responsaveis["Total Geral"] / resumo_responsaveis["Total Geral"].sum() * 100).round(1)
+            
+            # Exibir tabela estilizada
+            def highlight_max(s):
+                """Destaca o valor máximo em verde claro"""
+                is_max = s == s.max()
+                return ['background-color: teal' if v else '' for v in is_max]
+            
+            styled_df = resumo_responsaveis.style.format({
+                "Total Geral": "{:.0f}",
+                "Média Mensal": "{:.1f}",
+                "Máximo": "{:.0f}",
+                "Mínimo": "{:.0f}",
+                "Variação": "{:.0f}",
+                "% do Total": "{:.1f}%"
+            }).apply(highlight_max, subset=["Total Geral"])
+            
+            st.dataframe(styled_df, use_container_width=True)
+        
+        # Ranking de Responsáveis em seção retrátil
+        with st.expander("📊 Ranking de Responsáveis", expanded=False):
+            ranking_data = resumo_responsaveis.reset_index()
+            
+            fig_ranking = px.bar(
+                ranking_data.head(10),  # Top 10
+                x="Primeiro_Nome",
+                y="Total Geral",
+                text="Total Geral",
+                title=f"Top 10 Responsáveis por Total de Casos em {ano_selecionado}",
+                color="Total Geral",
+                color_continuous_scale="Blues"
+            )
+            
+            fig_ranking.update_traces(
+                textposition='outside',  # Mantido fora das barras
+                textfont=dict(color='white', size=12, family='Arial Bold')
+            )
+            
+            max_value = ranking_data.head(10)["Total Geral"].max()
+            
+            fig_ranking.update_layout(
+                xaxis_title="Responsável",
+                yaxis_title="Total de Casos",
+                showlegend=False,
+                height=500,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                margin=dict(t=80, b=60, l=60, r=60),
+                yaxis=dict(
+                    range=[0, max_value * 1.15]  # 15% de espaço extra para textos externos
+                ),
+                font=dict(color='white'),
+                title=dict(
+                    font=dict(color='white', size=16),
+                    x=0.5,
+                    xanchor='center'
+                )
+            )
+            
+            fig_ranking.update_xaxes(
+                tickangle=45,
+                tickfont=dict(color='white')
+            )
+            
+            fig_ranking.update_yaxes(
+                tickfont=dict(color='white')
+            )
+                   
+            st.plotly_chart(fig_ranking, use_container_width=True)
 
         ## 6️⃣ Casos por Tipo (Mensal) - NOVO GRÁFICO
         st.subheader("6️⃣ Casos por Tipo (Mensal)")
@@ -487,9 +688,6 @@ if df is not None:
 
         ## 7️⃣ Índice de Resolubilidade
         st.subheader("7️⃣ Índice de Resolubilidade")
-
-        import calendar
-        import plotly.graph_objects as go
 
         df_filtrado["Resolvido_Mesmo_Dia"] = df_filtrado["Abertura"] == df_filtrado["Solução"]
         df_filtrado["Ano"] = df_filtrado["Abertura"].dt.year
