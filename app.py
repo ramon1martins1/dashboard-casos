@@ -246,7 +246,7 @@ def create_mini_responsaveis_chart_improved(df_filtrado, height=100):
 
 # ✅ OTIMIZAÇÃO: Session state para dados
 if 'df' not in st.session_state:
-    with st.spinner("🚀 Carregando dados otimizados..."):
+    with st.spinner("🚀 Carregando dados..."):
         st.session_state.df = load_data_optimized()
 
 df = st.session_state.df
@@ -424,7 +424,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
 
 with tab1:
     ## 1️⃣ GRÁFICO ORIGINAL - Total de Casos por Mês
-    st.subheader("1️⃣ Total de casos por mês")
+    st.subheader("Total de casos por mês")
 
     # Código original mantido
     df_filtrado_copy = df_filtrado.copy()
@@ -522,14 +522,14 @@ with tab1:
         height=500,
         bargap=0,
         bargroupgap=0,
-        title='Total de casos por mês'
+        title=' '
     )
 
     st.plotly_chart(fig1, use_container_width=True)
 
 with tab2:
     ## 2️⃣ GRÁFICO ORIGINAL - Casos por Origem
-    st.subheader("2️⃣ Casos por origem (Mensal)")
+    st.subheader("Casos por origem (Mensal)")
     
     df_ordenado = df_filtrado.sort_values("AnoMes")
     meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
@@ -543,7 +543,7 @@ with tab2:
         y="Total", 
         color="Origem", 
         text="Total", 
-        title="Casos por Origem",
+        title=" ",
         barmode='group'
     )
     fig2.update_traces(textposition='outside')
@@ -557,7 +557,7 @@ with tab2:
 
 with tab3:
     ## 3️⃣ GRÁFICO ORIGINAL - Reaberturas por Mês
-    st.subheader("3️⃣ Reaberturas por mês")
+    st.subheader("Reaberturas por mês")
 
     df_filtrado_copy = df_filtrado.copy()
     df_filtrado_copy['Ano'] = df_filtrado_copy['Ano'].astype(int).astype(str)
@@ -655,14 +655,14 @@ with tab3:
         height=500,
         bargap=0,
         bargroupgap=0,
-        title='Reaberturas por mês'
+        title=' '
     )
 
     st.plotly_chart(fig3, use_container_width=True)
 
 with tab4:
     ## 4️⃣ GRÁFICO ORIGINAL - Top 10 Contas
-    st.subheader("4️⃣ Top 10 contas com mais casos")
+    st.subheader("Top 10 contas com mais casos")
     
     top_contas = df_filtrado["Conta_Resumida"].value_counts().nlargest(10).reset_index()
     top_contas.columns = ["Conta", "Total"]
@@ -672,7 +672,7 @@ with tab4:
         x="Conta", 
         y="Total", 
         text="Total", 
-        title="Top 10 contas"
+        title=" "
     )
     fig4.update_traces(textposition='outside')
     fig4.update_layout(xaxis={'categoryorder':'total descending'})
@@ -680,7 +680,7 @@ with tab4:
 
 with tab5:
     ## 5️⃣ GRÁFICO ORIGINAL - Casos por Responsável (COMPLETO)
-    st.subheader("5️⃣ Casos por Responsável (Mensal)")
+    st.subheader("Casos por Responsável (Mensal)")
     
     anos_disponiveis = sorted(df_filtrado["Ano"].unique())
     ano_selecionado = st.selectbox("Selecione o ano:", anos_disponiveis, index=len(anos_disponiveis)-1)
@@ -905,7 +905,7 @@ with tab5:
 
 with tab6:
     ## 6️⃣ GRÁFICO ORIGINAL - Casos por Tipo
-    st.subheader("6️⃣ Casos por Tipo (Mensal)")
+    st.subheader("Casos por Tipo (Mensal)")
     
     df_ordenado = df_filtrado.sort_values("AnoMes")
     meses_display_ordenados = df_ordenado["AnoMes_Display"].unique()
@@ -919,7 +919,7 @@ with tab6:
         y="Total",
         color="Tipo",
         text="Total",
-        title="Casos por Tipo",
+        title=" ",
         barmode='group'
     )
     fig6.update_traces(textposition='outside')
@@ -933,7 +933,7 @@ with tab6:
 
 with tab7:
     ## 7️⃣ GRÁFICO ORIGINAL - Índice de Resolubilidade
-    st.subheader("7️⃣ Índice de Resolubilidade")
+    st.subheader("Índice de Resolubilidade")
 
     df_filtrado_copy = df_filtrado.copy()
     df_filtrado_copy["Resolvido_Mesmo_Dia"] = df_filtrado_copy["Abertura"] == df_filtrado_copy["Solução"]
