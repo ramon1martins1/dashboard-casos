@@ -46,6 +46,23 @@ def inject_universal_css():
     </style>
     """, unsafe_allow_html=True)
 
+def formatar_mes_pt(data):
+    """Formata data para mês abreviado em português"""
+    meses = {
+        1: 'Jan', 2: 'Fev', 3: 'Mar', 4: 'Abr', 5: 'Mai', 6: 'Jun',
+        7: 'Jul', 8: 'Ago', 9: 'Set', 10: 'Out', 11: 'Nov', 12: 'Dez'
+    }
+    return f"{meses[data.month]}/{data.year}"
+
+def traduzir_mes(mes_nome):
+    """Traduz nome do mês em inglês para português abreviado"""
+    traducao = {
+        'Jan': 'Jan', 'Feb': 'Fev', 'Mar': 'Mar', 'Apr': 'Abr',
+        'May': 'Mai', 'Jun': 'Jun', 'Jul': 'Jul', 'Aug': 'Ago',
+        'Sep': 'Set', 'Oct': 'Out', 'Nov': 'Nov', 'Dec': 'Dez'
+    }
+    return traducao.get(mes_nome, mes_nome)  # Retorna o original se não encontrar        
+
 def detect_streamlit_theme():
     """Detecta se está em dark ou light mode"""
     try:
@@ -162,7 +179,7 @@ def load_data_optimized():
         
         # Processamento otimizado
         df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')
-        df["AnoMes_Display"] = df["Abertura"].dt.strftime('%b/%Y')
+        df["AnoMes_Display"] = df["Abertura"].apply(formatar_mes_pt)
         df["Ano"] = df["Abertura"].dt.year
         df["Conta_Resumida"] = df["Conta"].apply(lambda x: ' '.join(x.split()[:2]) if pd.notnull(x) else x)
         df['Responsável'] = df['Responsável'].apply(agrupar_responsavel)
@@ -398,7 +415,7 @@ if df_filtrado.empty:
 
 # ✅ RESUMO EXECUTIVO MELHORADO
 st.markdown("---")
-st.subheader("📊 Resumo Executivo")
+st.subheader("📊 Resumo")
 
 # ✅ CORRIGIDO: Calcular métricas garantindo anos como inteiros
 total_casos = len(df_filtrado)
@@ -410,11 +427,12 @@ casos_por_ano = df_work.groupby('Ano_Int').size().sort_index()
 
 # Mês atual dos dados (último mês disponível)
 ultimo_mes_dados = df_filtrado['Abertura'].max()
-mes_atual_nome = ultimo_mes_dados.strftime('%B/%Y')
 casos_mes_atual = len(df_filtrado[
     (df_filtrado['Abertura'].dt.month == ultimo_mes_dados.month) & 
     (df_filtrado['Abertura'].dt.year == ultimo_mes_dados.year)
 ])
+
+mes_atual_nome = formatar_mes_pt(ultimo_mes_dados)
 
 # ✅ CORRIGIDO: Reaberturas garantindo anos como inteiros
 total_reaberturas = df_filtrado['Qt Reab.'].sum()
@@ -594,7 +612,7 @@ with tab1:
             y=1.05,
             xref='x',
             yref='paper',
-            text=mes_nome,
+            text=traduzir_mes(mes_nome),
             showarrow=False,
             font=dict(size=14, color='white'),
             xanchor='center'
@@ -728,7 +746,7 @@ with tab3:
             y=1.05,
             xref='x',
             yref='paper',
-            text=mes_nome,
+            text=traduzir_mes(mes_nome),
             showarrow=False,
             font=dict(size=14, color='white'),
             xanchor='center'
@@ -1048,11 +1066,7 @@ with tab7:
             Resolvido_Mesmo_Dia=lambda x: x["Abertura"] == x["Solução"],
             Ano=lambda x: x["Abertura"].dt.year,
             Mes=lambda x: x["Abertura"].dt.month,
-            Mes_Display=lambda x: (
-                x["Mes"].apply(lambda y: calendar.month_abbr[y]) + 
-                "/" + 
-                x["Ano"].astype(str)
-            ),
+            Mes_Display=lambda x: x["Abertura"].apply(formatar_mes_pt),
             Mes_Ano_Ordenacao=lambda x: x["Ano"] * 100 + x["Mes"],
             Primeiro_Nome=lambda x: x["Responsável"].str.split().str[0].fillna("Não informado")
         )
@@ -1132,7 +1146,7 @@ with tab7:
     ))
 
     fig7.update_layout(
-        title=f"Índice de resolubilidade - {mes_escolhido}",
+        title=f"Índice de resolubilidade - {traduzir_mes(mes_escolhido)}",
         xaxis_title="Responsável",
         yaxis=dict(title="Quantidade de casos"),
         yaxis2=dict(title="% Resolubilidade", overlaying="y", side="right"),
