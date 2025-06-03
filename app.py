@@ -12,7 +12,103 @@ import pickle
 import os
 from datetime import datetime, timedelta
 
+def inject_universal_css():
+    """Injeta CSS que funciona em dark e light mode"""
+    st.markdown("""
+    <style>
+    /* CSS adaptativo para ambos os temas */
+    .stApp {
+        color-scheme: light dark;
+    }
+    
+    /* Forçar visibilidade de texto em gráficos */
+    .js-plotly-plot .plotly text {
+        fill: var(--text-color) !important;
+    }
+    
+    .js-plotly-plot .plotly .textpoint {
+        fill: var(--text-color) !important;
+        font-weight: bold !important;
+    }
+    
+    /* Variáveis CSS para temas */
+    :root {
+        --text-color: #000000;
+        --bg-color: #ffffff;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text-color: #ffffff;
+            --bg-color: #0e1117;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+def detect_streamlit_theme():
+    """Detecta se está em dark ou light mode"""
+    try:
+        # Tentar detectar pelo session state do Streamlit
+        if hasattr(st, '_config') and hasattr(st._config, 'get_option'):
+            theme = st._config.get_option('theme.base')
+            if theme == 'dark':
+                return 'dark'
+            elif theme == 'light':
+                return 'light'
+    except:
+        pass
+    
+    # Fallback: assumir dark mode como padrão
+    return 'dark'
+
+def apply_universal_theme(fig, theme_mode='auto'):
+    """Aplica tema universal que funciona em dark e light mode"""
+    
+    if theme_mode == 'auto':
+        theme_mode = detect_streamlit_theme()
+    
+    if theme_mode == 'dark':
+        # Configurações para dark mode
+        text_color = 'white'
+        bg_color = 'rgba(0,0,0,0)'
+        grid_color = 'rgba(255,255,255,0.1)'
+    else:
+        # Configurações para light mode
+        text_color = 'black'
+        bg_color = 'rgba(255,255,255,0.9)'
+        grid_color = 'rgba(0,0,0,0.1)'
+    
+    # Aplicar configurações
+    fig.update_layout(
+        font=dict(color=text_color, family='Arial'),
+        plot_bgcolor=bg_color,
+        paper_bgcolor=bg_color,
+        xaxis=dict(
+            gridcolor=grid_color,
+            tickfont=dict(color=text_color)
+        ),
+        yaxis=dict(
+            gridcolor=grid_color,
+            tickfont=dict(color=text_color)
+        )
+    )
+    
+    # Atualizar texto das barras/traces
+    fig.update_traces(
+        textfont=dict(color=text_color, size=12, family='Arial')
+    )
+    
+    # Atualizar anotações se existirem
+    if hasattr(fig.layout, 'annotations') and fig.layout.annotations:
+        for annotation in fig.layout.annotations:
+            annotation.font.update(color=text_color, family='Arial')
+    
+    return fig
+
 st.set_page_config(page_title="Indicadores de dados", layout="wide")
+inject_universal_css()
+current_theme = detect_streamlit_theme()
 
 st.title("📊 Indicadores de casos")
 
@@ -345,6 +441,7 @@ with col1:
     # Mini gráfico CORRIGIDO
     if len(casos_por_ano) > 1:
         fig_casos = create_mini_horizontal_bar(casos_por_ano, "Casos por Ano", "#1f77b4", 100)
+        fig_casos = apply_universal_theme(fig_casos, current_theme)
         st.plotly_chart(fig_casos, use_container_width=True, config={'displayModeBar': False})
     else:
         st.markdown("<div style='height: 100px; display: flex; align-items: center; justify-content: center; color: #666;'><small>Dados de um único ano</small></div>", unsafe_allow_html=True)
@@ -525,6 +622,7 @@ with tab1:
         bargroupgap=0
     )
 
+    fig1 = apply_universal_theme(fig1, current_theme)
     st.plotly_chart(fig1, use_container_width=True)
 
 with tab2:
@@ -552,6 +650,7 @@ with tab2:
         categoryarray=meses_display_ordenados,
         title_text="Mês/Ano"
     )
+    fig2 = apply_universal_theme(fig2, current_theme)
     st.plotly_chart(fig2, use_container_width=True)
 
 with tab3:
@@ -657,6 +756,7 @@ with tab3:
         bargroupgap=0
     )
 
+    fig3 = apply_universal_theme(fig3, current_theme)
     st.plotly_chart(fig3, use_container_width=True)
 
 with tab4:
@@ -674,6 +774,7 @@ with tab4:
     )
     fig4.update_traces(textposition='outside')
     fig4.update_layout(xaxis={'categoryorder':'total descending'})
+    fig4 = apply_universal_theme(fig4, current_theme)
     st.plotly_chart(fig4, use_container_width=True)
 
 with tab5:
@@ -832,6 +933,7 @@ with tab5:
         tickfont=dict(color="white")
     )
     
+    fig5 = apply_universal_theme(fig5, current_theme)
     st.plotly_chart(fig5, use_container_width=True)
     
     # SEÇÕES ORIGINAIS - Análise Detalhada
@@ -901,7 +1003,8 @@ with tab5:
         
         fig_ranking.update_xaxes(tickangle=45, tickfont=dict(color='white'))
         fig_ranking.update_yaxes(tickfont=dict(color='white'))
-               
+
+        fig_ranking = apply_universal_theme(fig_ranking, current_theme)       
         st.plotly_chart(fig_ranking, use_container_width=True)
 
 with tab6:
@@ -930,6 +1033,7 @@ with tab6:
         categoryarray=meses_display_ordenados,
         title_text="Mês/Ano"
     )
+    fig6 = apply_universal_theme(fig6, current_theme)
     st.plotly_chart(fig6, use_container_width=True)
 
 with tab7:
@@ -1039,5 +1143,6 @@ with tab7:
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='white')
     )
-
+    
+    fig7 = apply_universal_theme(fig7, current_theme)
     st.plotly_chart(fig7, use_container_width=True)
