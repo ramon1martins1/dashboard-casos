@@ -267,6 +267,37 @@ def create_mini_horizontal_bar(data, title, color="#d62728", height=100):
     
     return fig
 
+def create_mini_horizontal_bar2(data, title, color, height=150):
+
+    data['Texto_Formatado'] = data['Tempo_Medio'].apply(lambda x: f"{x:,.2f}".replace('.', ',') + " dias" if pd.notna(x) else "-")
+
+    fig = px.bar(
+        data,
+        x='Tempo_Medio',
+        y='Tipo',
+        orientation='h',
+        text='Texto_Formatado',
+        color_discrete_sequence=[color]
+    )
+    
+    fig.update_traces(
+        textposition='outside'
+    )
+ 
+    fig.update_layout(
+        title=title if title.strip() else None,
+        height=height,
+        margin=dict(l=0, r=0, t=30, b=0),
+        xaxis_title=None,
+        yaxis_title=None,
+        showlegend=False
+    )
+    
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(automargin=True)
+    
+    return fig
+
 # ✅ FUNÇÃO MELHORADA: Métricas detalhadas de responsáveis
 def calcular_metricas_responsaveis(df_filtrado):
     """Calcula métricas detalhadas dos responsáveis"""
@@ -533,8 +564,8 @@ with col4:
 st.markdown("---")
 
 # ✅ ESTRUTURA DE ABAS PARA PERFORMANCE (mantendo gráficos originais)
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "📊 Casos/Mês", "🏢 Origem", "🔄 Reaberturas", "🏆 Top Contas", "👤 Responsáveis", "📋 Tipos", "📈 Resolubilidade"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8  = st.tabs([
+    "📊 Casos/Mês", "🏢 Origem", "🔄 Reaberturas", "🏆 Top Contas", "👤 Responsáveis", "📋 Tipos", "📈 Resolubilidade",  "⏱ Tempo Solução"
 ])
 
 with tab1:
@@ -1160,3 +1191,206 @@ with tab7:
     
     fig7 = apply_universal_theme(fig7, current_theme)
     st.plotly_chart(fig7, use_container_width=True)
+
+with tab8:
+    st.subheader("⏱ Tempo Médio de Solução de Casos")
+    
+    # Filtro de anos para esta visualização específica
+    anos_tempo = sorted(df_filtrado["Ano"].dropna().astype(int).unique())
+    anos_sel_tempo = st.multiselect("Selecione os anos para comparar:", 
+                                  anos_tempo, 
+                                  default=anos_tempo[-2:] if len(anos_tempo) > 1 else anos_tempo,
+                                  key="tempo_anos")
+    
+    if not anos_sel_tempo:
+        st.warning("Selecione pelo menos um ano para visualizar os dados.")
+        st.stop()
+    
+    # Preparar dados - calcular tempo médio de solução
+    df_tempo = df_filtrado.copy()
+    
+    # Calcular dias para solução (considerando apenas casos resolvidos)
+    df_tempo = df_tempo[df_tempo['Solução'].notna()].copy()
+    df_tempo['Dias_Solucao'] = (df_tempo['Solução'] - df_tempo['Abertura']).dt.days
+    
+    # Agrupar por Ano, Mês e Tipo
+    df_tempo_agrupado = df_tempo.groupby(['Ano', 'AnoMes', 'AnoMes_Display', 'Tipo']).agg(
+        Total_Casos=('Dias_Solucao', 'count'),
+        Soma_Dias=('Dias_Solucao', 'sum')
+    ).reset_index()
+    
+    # Calcular tempo médio
+    df_tempo_agrupado['Tempo_Medio'] = df_tempo_agrupado['Soma_Dias'] / df_tempo_agrupado['Total_Casos']
+    
+    # Filtrar pelos anos selecionados
+    df_tempo_filtrado = df_tempo_agrupado[df_tempo_agrupado['Ano'].isin(anos_sel_tempo)]
+    
+    if df_tempo_filtrado.empty:
+        st.warning("Nenhum dado disponível para os filtros selecionados.")
+        st.stop()
+    
+    # Resumo por ano
+    st.markdown("### 📅 Resumo Anual")
+    
+    # Calcular resumo anual
+    resumo_anual = df_tempo_filtrado.groupby('Ano').agg(
+        Total_Casos=('Total_Casos', 'sum'),
+        Soma_Dias=('Soma_Dias', 'sum')
+    ).reset_index()
+    
+    resumo_anual['Tempo_Medio_Ano'] = resumo_anual['Soma_Dias'] / resumo_anual['Total_Casos']
+    
+    # Mostrar métricas de resumo
+    cols = st.columns(len(anos_sel_tempo))
+    cores = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    
+    for i, (_, row) in enumerate(resumo_anual.iterrows()):
+        with cols[i]:
+            # Card Tempo Médio do Ano
+            st.markdown(
+                f"""
+                <div style="text-align: center; padding: 8px; border: 1px solid #333; border-radius: 8px; background: rgba(31, 119, 180, 0.1); height: 80px; display: flex; flex-direction: column; justify-content: center;">
+                    <h5 style="margin: 0; padding: 0; color: #1f77b4; font-size: 14px;">⏱️ Tempo Médio {int(row['Ano'])}</h5>
+                    <h2 style="margin: 2px 0; padding: 0; color: #1f77b4; font-size: 24px;">{row['Tempo_Medio_Ano']:,.2f} dias</h2>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Filtra dados para o ano atual
+            dados_mini = df_tempo_filtrado[df_tempo_filtrado['Ano'] == row['Ano']].groupby('Tipo').agg(
+                Tempo_Medio=('Tempo_Medio', 'mean')
+            ).reset_index()
+
+            # Se tiver mais de um tipo, exibe mini gráfico
+            if len(dados_mini) > 0:
+                fig_tipos = create_mini_horizontal_bar2(
+                    dados_mini,
+                    title="-",  # título vazio pra não mostrar
+                    color="#ff7f0e",
+                    height=150
+                )
+                fig_tipos = apply_universal_theme(fig_tipos, current_theme)
+                st.plotly_chart(fig_tipos, use_container_width=True, config={'displayModeBar': False})
+            else:
+                st.markdown("<div style='height: 100px; display: flex; align-items: center; justify-content: center; color: #666;'><small>Sem dados suficientes</small></div>", unsafe_allow_html=True)
+
+
+    
+    st.markdown("---")
+    st.markdown("### 📈 Evolução Mensal por Tipo")
+    
+    # Ordenar meses corretamente
+    df_tempo_filtrado = df_tempo_filtrado.sort_values(['Ano', 'AnoMes'])
+    df_tempo_filtrado['Tempo_Medio_Label'] = df_tempo_filtrado['Tempo_Medio'].apply(
+        lambda x: f"{x:.2f}".replace('.', ',') if pd.notnull(x) else ''
+    )
+    
+    # Criar gráfico de linhas com facetas por tipo
+    fig_tempo = px.line(
+        df_tempo_filtrado,
+        x='AnoMes_Display',
+        y='Tempo_Medio',
+        color='Ano',
+        facet_col='Tipo',
+        facet_col_wrap=2,
+        text='Tempo_Medio_Label',
+        labels={
+            'AnoMes_Display': 'Mês/Ano',
+            'Tempo_Medio': 'Tempo Médio (dias)',
+            'Tempo_Medio_Label':'Tempo médio',
+            'Ano': 'Ano'
+        },
+        hover_data={'Tempo_Medio': False, 'Tempo_Medio_Label': True, 'AnoMes_Display': False}, 
+        title='Tempo Médio de Solução por Tipo e Ano',
+        height=600,
+        color_discrete_sequence=cores
+    )
+    
+    # Adicionar pontos para cada mês
+    fig_tempo.update_traces(
+        mode='lines+markers+text',
+        textposition='top center'
+    )                   
+    
+    # Melhorar formatação
+    fig_tempo.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white'),
+        margin=dict(t=80, b=80, l=60, r=60),
+        hovermode='x unified'
+    )
+    
+    # Ajustar facetas
+    fig_tempo.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    fig_tempo.update_xaxes(tickangle=45)
+    
+    # Aplicar tema universal
+    fig_tempo = apply_universal_theme(fig_tempo, current_theme)
+    st.plotly_chart(fig_tempo, use_container_width=True)
+    
+        # Tabela detalhada - Versão Corrigida
+    with st.expander("📋 Ver dados detalhados", expanded=False):
+        # Criar tabela pivotada corretamente
+        pivot_table = df_tempo_filtrado.pivot_table(
+            index=['Tipo', 'AnoMes_Display'],
+            columns='Ano',
+            values='Tempo_Medio',
+            aggfunc='mean'
+        ).reset_index()
+        
+        # Extrair apenas o mês da coluna AnoMes_Display
+        pivot_table['Mês'] = pivot_table['AnoMes_Display'].str.split('/').str[0]
+        
+        # Remover a coluna original
+        pivot_table = pivot_table.drop('AnoMes_Display', axis=1)
+        
+        # Agrupar por Tipo e Mês para consolidar
+        pivot_table = pivot_table.groupby(['Tipo', 'Mês']).first().reset_index()
+        
+        # Ordenar os meses corretamente
+        meses_ordem = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        pivot_table['Mês'] = pd.Categorical(pivot_table['Mês'], categories=meses_ordem, ordered=True)
+        pivot_table = pivot_table.sort_values(['Tipo', 'Mês'])
+        
+        # Formatar os valores
+        for ano in anos_sel_tempo:
+            if ano in pivot_table.columns:
+                pivot_table[ano] = pivot_table[ano].apply(
+                    lambda x: f"{x:,.2f} dias".replace('.', ',') if pd.notna(x) else "-"
+                )
+
+        # Estilizar a tabela
+        def style_table(row):
+            styles = []
+            for col in row.index:
+                if col == 'Tipo':
+                    styles.append('font-weight: bold; background-color: #2c3e50; color: white;')
+                elif col == 'Mês':
+                    styles.append('font-weight: bold;')
+                else:
+                    # Colorir por ano
+                    if col == 2024:
+                        styles.append('background-color: rgba(31, 119, 180, 0.1);')
+                    elif col == 2025:
+                        styles.append('background-color: rgba(255, 127, 14, 0.1);')
+                    else:
+                        styles.append('')
+            return styles
+        
+        # Mostrar tabela estilizada
+        st.dataframe(
+            pivot_table.style.apply(style_table, axis=1),
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Mês": st.column_config.TextColumn("Mês", width="small"),
+                "Tipo": st.column_config.TextColumn("Tipo de Caso", width="medium"),
+                **{int(ano): st.column_config.TextColumn(
+                    str(ano),
+                    width="small")
+                   for ano in anos_sel_tempo}
+            }
+        )
