@@ -267,6 +267,37 @@ def create_mini_horizontal_bar(data, title, color="#d62728", height=100):
     
     return fig
 
+def create_mini_horizontal_bar2(data, title, color, height=150):
+
+    data['Texto_Formatado'] = data['Tempo_Medio'].apply(lambda x: f"{x:,.2f}".replace('.', ',') + " dias" if pd.notna(x) else "-")
+
+    fig = px.bar(
+        data,
+        x='Tempo_Medio',
+        y='Tipo',
+        orientation='h',
+        text='Texto_Formatado',
+        color_discrete_sequence=[color]
+    )
+    
+    fig.update_traces(
+        textposition='outside'
+    )
+ 
+    fig.update_layout(
+        title=title if title.strip() else None,
+        height=height,
+        margin=dict(l=0, r=0, t=30, b=0),
+        xaxis_title=None,
+        yaxis_title=None,
+        showlegend=False
+    )
+    
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(automargin=True)
+    
+    return fig
+
 # ✅ FUNÇÃO MELHORADA: Métricas detalhadas de responsáveis
 def calcular_metricas_responsaveis(df_filtrado):
     """Calcula métricas detalhadas dos responsáveis"""
@@ -1215,17 +1246,45 @@ with tab8:
     
     for i, (_, row) in enumerate(resumo_anual.iterrows()):
         with cols[i]:
-            st.metric(
-                label=f"Tempo Médio {int(row['Ano'])}",
-                value=f"{row['Tempo_Medio_Ano']:.1f} dias",
-                help=f"Baseado em {int(row['Total_Casos'])} casos"
+            # Card Tempo Médio do Ano
+            st.markdown(
+                f"""
+                <div style="text-align: center; padding: 8px; border: 1px solid #333; border-radius: 8px; background: rgba(31, 119, 180, 0.1); height: 80px; display: flex; flex-direction: column; justify-content: center;">
+                    <h5 style="margin: 0; padding: 0; color: #1f77b4; font-size: 14px;">⏱️ Tempo Médio {int(row['Ano'])}</h5>
+                    <h2 style="margin: 2px 0; padding: 0; color: #1f77b4; font-size: 24px;">{row['Tempo_Medio_Ano']:,.2f} dias</h2>
+                </div>
+                """,
+                unsafe_allow_html=True
             )
+
+            # Filtra dados para o ano atual
+            dados_mini = df_tempo_filtrado[df_tempo_filtrado['Ano'] == row['Ano']].groupby('Tipo').agg(
+                Tempo_Medio=('Tempo_Medio', 'mean')
+            ).reset_index()
+
+            # Se tiver mais de um tipo, exibe mini gráfico
+            if len(dados_mini) > 0:
+                fig_tipos = create_mini_horizontal_bar2(
+                    dados_mini,
+                    title="-",  # título vazio pra não mostrar
+                    color="#ff7f0e",
+                    height=150
+                )
+                fig_tipos = apply_universal_theme(fig_tipos, current_theme)
+                st.plotly_chart(fig_tipos, use_container_width=True, config={'displayModeBar': False})
+            else:
+                st.markdown("<div style='height: 100px; display: flex; align-items: center; justify-content: center; color: #666;'><small>Sem dados suficientes</small></div>", unsafe_allow_html=True)
+
+
     
     st.markdown("---")
     st.markdown("### 📈 Evolução Mensal por Tipo")
     
     # Ordenar meses corretamente
     df_tempo_filtrado = df_tempo_filtrado.sort_values(['Ano', 'AnoMes'])
+    df_tempo_filtrado['Tempo_Medio_Label'] = df_tempo_filtrado['Tempo_Medio'].apply(
+        lambda x: f"{x:.2f}".replace('.', ',') if pd.notnull(x) else ''
+    )
     
     # Criar gráfico de linhas com facetas por tipo
     fig_tempo = px.line(
@@ -1235,18 +1294,24 @@ with tab8:
         color='Ano',
         facet_col='Tipo',
         facet_col_wrap=2,
+        text='Tempo_Medio_Label',
         labels={
             'AnoMes_Display': 'Mês/Ano',
             'Tempo_Medio': 'Tempo Médio (dias)',
+            'Tempo_Medio_Label':'Tempo médio',
             'Ano': 'Ano'
         },
+        hover_data={'Tempo_Medio': False, 'Tempo_Medio_Label': True, 'AnoMes_Display': False}, 
         title='Tempo Médio de Solução por Tipo e Ano',
         height=600,
         color_discrete_sequence=cores
     )
     
     # Adicionar pontos para cada mês
-    fig_tempo.update_traces(mode='lines+markers')
+    fig_tempo.update_traces(
+        mode='lines+markers+text',
+        textposition='top center'
+    )                   
     
     # Melhorar formatação
     fig_tempo.update_layout(
@@ -1294,8 +1359,9 @@ with tab8:
         for ano in anos_sel_tempo:
             if ano in pivot_table.columns:
                 pivot_table[ano] = pivot_table[ano].apply(
-                    lambda x: f"{x:.1f} dias" if pd.notna(x) else "-")
-        
+                    lambda x: f"{x:,.2f} dias".replace('.', ',') if pd.notna(x) else "-"
+                )
+
         # Estilizar a tabela
         def style_table(row):
             styles = []

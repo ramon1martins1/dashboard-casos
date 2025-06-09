@@ -176,6 +176,7 @@ def load_data_optimized():
         gdown.download(url, output, quiet=True)
         
         df = pd.read_excel(output, parse_dates=["Abertura", "Solução"])
+        df.columns = df.columns.map(str)
         
         # Processamento otimizado
         df["AnoMes"] = df["Abertura"].dt.strftime('%Y-%m')
@@ -431,14 +432,27 @@ anos = sorted(df["Ano"].dropna().astype(int).unique())
 origens = sorted(df["Origem"].dropna().unique())
 responsaveis = sorted(df["Responsável"].dropna().unique())
 tipos = sorted(df["Tipo"].dropna().unique())
+produtos = sorted(df["Produto"].dropna().unique()) if "Produto" in df.columns else []
 
 ano_sel = st.sidebar.multiselect("Ano:", anos, default=anos)
 origem_sel = st.sidebar.multiselect("Origem:", origens, default=origens)
 resp_sel = st.sidebar.multiselect("Responsável:", responsaveis, default=responsaveis)
 tipo_sel = st.sidebar.multiselect("Tipo:", tipos, default=tipos)
+produto_sel = st.sidebar.multiselect("Produto:", produtos, default=produtos) if produtos else []
+
+@st.cache_data(show_spinner=False)
+def filter_data(df, anos, origens, responsaveis, tipos, produtos):
+    return df[
+        df["Ano"].isin(anos) &
+        df["Origem"].isin(origens) &
+        df["Responsável"].isin(responsaveis) &
+        df["Tipo"].isin(tipos) &
+        df["Produto"].isin(produtos)
+    ].copy()
+
 
 # Aplicar filtros
-df_filtrado = filter_data(df, ano_sel, origem_sel, resp_sel, tipo_sel)
+df_filtrado = filter_data(df, ano_sel, origem_sel, resp_sel, tipo_sel, produto_sel)
 
 if df_filtrado.empty:
     st.warning("⚠️ Nenhum dado para os filtros selecionados.")
